@@ -19,7 +19,8 @@ else:
     notebook = db.get_notebook(st.session_state.current_notebook)
     
     if notebook:
-        st.header(f"📓 {notebook['filename']}")
+        filename = notebook.get('filename', 'Untitled Notebook')
+        st.header(f"📓 {filename}")
         
         # Display PDF
         pdf_content = notebook.get('pdf_content')
@@ -38,7 +39,7 @@ else:
             st.download_button(
                 label="📥 Download PDF",
                 data=pdf_bytes,
-                file_name=notebook['filename'],
+                file_name=notebook.get('filename', 'document.pdf'),
                 mime="application/pdf"
             )
         else:

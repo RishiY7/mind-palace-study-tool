@@ -4,12 +4,13 @@ Main application entry point
 """
 import streamlit as st
 import base64
+import json
 from utils.db import Database
 from utils.helpers import extract_text_from_pdf, load_prompt, call_gemini
 
 # Page configuration
 st.set_page_config(
-    page_title="Mind Palace",
+    page_title="Mind Palace - Home",
     page_icon="🧠",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -52,12 +53,18 @@ st.markdown("""
 
 def main():
     # Header
-    st.markdown('<div class="main-header">🧠 Mind Palace</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">Your AI-Powered Learning Companion</div>', unsafe_allow_html=True)
+    if 'current_notebook' not in st.session_state:
+        st.markdown('<div class="main-header">🧠 Mind Palace</div>', unsafe_allow_html=True)
+        st.markdown('<div class="sub-header">Your AI-Powered Learning Companion</div>', unsafe_allow_html=True)
+    else:
+        st.markdown('<div class="sub-header">📚 My Learning Notebooks</div>', unsafe_allow_html=True)
     
     # Sidebar
     with st.sidebar:
-        st.header("📚 My Notebooks")
+        if 'current_notebook' in st.session_state:
+            st.header("📚 My Notebooks")
+        else:
+            st.header("🏠 Home")
         
         # Get all notebooks
         notebooks = db.get_all_notebooks()
@@ -67,8 +74,12 @@ def main():
                 with st.container():
                     col1, col2 = st.columns([3, 1])
                     with col1:
+                        # Get filename safely
+                        filename = notebook.get('filename', 'Untitled Notebook')
+                        display_name = filename[:30] + "..." if len(filename) > 30 else filename
+                        
                         if st.button(
-                            notebook['filename'][:30] + "..." if len(notebook['filename']) > 30 else notebook['filename'],
+                            display_name,
                             key=f"nb_{notebook['_id']}",
                             use_container_width=True
                         ):
@@ -84,7 +95,7 @@ def main():
             st.info("No notebooks yet. Upload a PDF to get started!")
         
         st.divider()
-        if st.button("➕ New Notebook", use_container_width=True):
+        if st.button("🏠 Home", use_container_width=True):
             if 'current_notebook' in st.session_state:
                 del st.session_state.current_notebook
             st.rerun()
@@ -158,14 +169,34 @@ def display_upload_section():
                 st.exception(e)
 
 def extract_topics_from_text(text):
-    """Extract potential topics from text (simple heuristic)."""
-    # Split into lines and find lines that look like headings
+    """
+    Extract topics from text using AI-based extraction.
+    Falls back to heuristic if AI fails.
+    """
+    # Try AI-based extraction first
+    try:
+        prompt_config = load_prompt('topics_prompt.json')
+        response = call_gemini(prompt_config, text[:8000])
+        
+        # Parse JSON response
+        topics = json.loads(response.strip())
+        if isinstance(topics, list) and len(topics) > 0:
+            return topics[:10]
+    except Exception as e:
+        # Log error but don't fail - use heuristic fallback
+        print(f"AI topic extraction failed: {e}")
+    
+    # Fallback: heuristic-based extraction
+    return extract_topics_heuristic(text)
+
+def extract_topics_heuristic(text):
+    """Fallback: Extract topics using simple heuristic (line filtering)."""
     lines = text.split('\n')
     topics = []
     
     for line in lines:
         line = line.strip()
-        # Simple heuristic: short lines (potential headings)
+        # Look for short lines that might be headings
         if line and len(line) < 100 and len(line) > 5:
             # Check if it's not all uppercase or all lowercase
             if not line.isupper() and not line.islower():
@@ -184,14 +215,15 @@ def extract_topics_from_text(text):
             "Conclusion and Summary"
         ]
     
-    return topics[:10]  # Return top 10 topics
+    return topics[:10]
 
 def display_notebook_info():
     """Display information about the current notebook."""
     notebook = db.get_notebook(st.session_state.current_notebook)
     
     if notebook:
-        st.header(f"📓 {notebook['filename']}")
+        filename = notebook.get('filename', 'Untitled Notebook')
+        st.header(f"📓 {filename}")
         
         st.markdown(f"""
         <div class="notebook-card">

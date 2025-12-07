@@ -19,7 +19,8 @@ else:
     notebook = db.get_notebook(st.session_state.current_notebook)
     
     if notebook:
-        st.header(f"📓 {notebook['filename']}")
+        filename = notebook.get('filename', 'Untitled Notebook')
+        st.header(f"📓 {filename}")
         
         st.markdown("""
         Generate memorable acronyms and mnemonic devices to help you remember key concepts!
