@@ -4,6 +4,7 @@ Acronym Generator Page - Generate mnemonic devices
 import streamlit as st
 from utils.db import Database
 from utils.helpers import load_prompt, call_gemini
+from utils.text_extraction import get_topic_text
 
 st.set_page_config(page_title="Acronym Generator", page_icon="🧠", layout="wide")
 
@@ -44,14 +45,18 @@ else:
                 if st.button("🧠 Generate Acronym from Topic", type="primary"):
                     with st.spinner(f"Creating mnemonic for '{selected_topic}'..."):
                         try:
-                            # Get relevant text
+                            # Get text relevant to the selected topic
                             text_content = notebook.get('text_content', '')
+                            
+                            # Use semantic extraction to get topic-specific text
+                            st.info(f"🔍 Extracting content for '{selected_topic}'...")
+                            topic_specific_text = get_topic_text(text_content, selected_topic)
                             
                             # Load acronym prompt
                             prompt_config = load_prompt('acronym_prompt.json')
                             
                             # Generate acronym
-                            response = call_gemini(prompt_config, text_content[:8000], text=selected_topic)
+                            response = call_gemini(prompt_config, topic_specific_text, text=selected_topic)
                             
                             # Store in session state
                             st.session_state.acronym_result = response

@@ -5,6 +5,7 @@ import streamlit as st
 import json
 from utils.db import Database
 from utils.helpers import load_prompt, call_gemini, parse_json_response
+from utils.text_extraction import get_topic_text
 
 st.set_page_config(page_title="Flashcards", page_icon="🎴", layout="wide")
 
@@ -38,14 +39,18 @@ else:
             if st.button("🎴 Generate Flashcards", type="primary"):
                 with st.spinner(f"Generating flashcards for '{selected_topic}'..."):
                     try:
-                        # Get relevant text for the topic (simplified: use full text)
+                        # Get text relevant to the selected topic
                         text_content = notebook.get('text_content', '')
+                        
+                        # Use semantic extraction to get topic-specific text
+                        st.info(f"🔍 Extracting content relevant to '{selected_topic}'...")
+                        topic_specific_text = get_topic_text(text_content, selected_topic)
                         
                         # Load flashcard prompt
                         prompt_config = load_prompt('flashcard_prompt.json')
                         
                         # Generate flashcards
-                        response = call_gemini(prompt_config, text_content[:8000], topic=selected_topic)
+                        response = call_gemini(prompt_config, topic_specific_text, topic=selected_topic)
                         
                         # Parse JSON response
                         flashcards = parse_json_response(response)

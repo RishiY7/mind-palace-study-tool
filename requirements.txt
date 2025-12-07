@@ -3,3 +3,7 @@ pymongo
 google-generativeai
 pypdf2
 python-dotenv
+sentence-transformers
+scikit-learn
+nltk
+einops
