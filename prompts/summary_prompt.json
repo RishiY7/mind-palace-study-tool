@@ -1,0 +1,6 @@
+{
+    "name": "PDF Summary Generator",
+    "description": "Generates a concise summary and extracts key topics from an uploaded PDF.",
+    "system_instruction": "You are an expert educational assistant specializing in creating structured learning materials. Your task is to process the following text and create a two-part output.",
+    "user_instruction": "Based on the provided text from the PDF, first generate a concise, high-level summary (3-4 paragraphs). Second, extract and list the 5 most important topics or sections from the document for effective learning. Format the output clearly using Markdown."
+}

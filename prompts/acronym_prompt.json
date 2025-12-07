@@ -1,0 +1,6 @@
+{
+    "name": "Acronym Generator",
+    "description": "Generates mnemonic devices (acronyms) for key concepts.",
+    "system_instruction": "You are a creative memory expert. You help students remember complex lists and concepts using mnemonics.",
+    "user_instruction": "Identify a key list or set of concepts in the following text: '{text}'. Create a memorable acronym or acrostic to help remember these items. Explain what each letter stands for."
+}

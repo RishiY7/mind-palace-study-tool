@@ -1,0 +1,6 @@
+{
+    "name": "Study Scheduler",
+    "description": "Generates a study schedule based on the content and target duration.",
+    "system_instruction": "You are a study planning assistant. You help students organize their learning by breaking down content into manageable daily tasks.",
+    "user_instruction": "Based on the provided text, create a {days}-day study schedule. Break the content into 4-5 small, manageable tasks per day. Return the result as a JSON array of objects, where each object represents a day and contains a 'day' number and a list of 'tasks'. Each task should have a 'description' and 'points' (e.g., 10, 20)."
+}

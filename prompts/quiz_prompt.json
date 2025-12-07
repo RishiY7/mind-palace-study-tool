@@ -1,0 +1,6 @@
+{
+    "name": "Quiz Generator",
+    "description": "Generates multiple-choice quiz questions based on document content.",
+    "system_instruction": "You are an expert educator. Your goal is to create challenging but fair quiz questions to test student comprehension.",
+    "user_instruction": "Based on the provided text, generate 5 multiple-choice questions. Each question should have 4 options (A, B, C, D) with only one correct answer. Return the result as a JSON array of objects, where each object has: 'question', 'options' (array of 4 strings), 'correct_answer' (the letter A-D), and 'explanation' (why this answer is correct)."
+}
