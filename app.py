@@ -95,6 +95,12 @@ def main():
             st.info("No notebooks yet. Upload a PDF to get started!")
         
         st.divider()
+        
+        # Today's Tasks Section (if notebook is selected)
+        if 'current_notebook' in st.session_state:
+            display_todays_tasks()
+            st.divider()
+        
         if st.button("🏠 Home", use_container_width=True):
             if 'current_notebook' in st.session_state:
                 del st.session_state.current_notebook
@@ -105,6 +111,91 @@ def main():
         display_notebook_info()
     else:
         display_upload_section()
+
+def display_todays_tasks():
+    """Display today's tasks from the study schedule in the sidebar."""
+    notebook = db.get_notebook(st.session_state.current_notebook)
+    
+    if not notebook:
+        return
+    
+    schedule = notebook.get('schedule')
+    if not schedule or not isinstance(schedule, list) or len(schedule) == 0:
+        st.info("📋 No schedule yet. Create one in Study Scheduler!")
+        return
+    
+    st.markdown("### 📋 Today's Tasks")
+    
+    # Get today's day (use day 1 as default or first day in schedule)
+    # In a real app, you might track which day the user started
+    current_day = st.session_state.get('current_study_day', 1)
+    
+    # Find today's schedule
+    todays_schedule = None
+    for day_data in schedule:
+        if isinstance(day_data, dict) and day_data.get('day') == current_day:
+            todays_schedule = day_data
+            break
+    
+    if not todays_schedule:
+        # If no schedule for today, use first available day
+        if isinstance(schedule[0], dict):
+            todays_schedule = schedule[0]
+            current_day = todays_schedule.get('day', 1)
+    
+    if todays_schedule:
+        tasks = todays_schedule.get('tasks', [])
+        
+        if not tasks:
+            st.info("✨ No tasks for today!")
+            return
+        
+        # Get progress
+        progress_data = db.get_progress(st.session_state.current_notebook)
+        completed_tasks = progress_data.get('completed_tasks', [])
+        
+        # Display tasks with checkboxes
+        for idx, task in enumerate(tasks):
+            if isinstance(task, dict):
+                task_id = f"{current_day}_{idx}"
+                is_completed = task_id in completed_tasks
+                
+                task_desc = task.get('description', 'Task')
+                task_points = task.get('points', 10)
+                
+                col1, col2 = st.columns([4, 1])
+                
+                with col1:
+                    # Create checkbox
+                    if is_completed:
+                        st.markdown(f"✅ ~~{task_desc}~~")
+                    else:
+                        # Use a button instead of checkbox for better control
+                        if st.button(
+                            f"☐ {task_desc}",
+                            key=f"task_sidebar_{idx}",
+                            use_container_width=True,
+                            help=f"Click to mark complete (+{task_points} pts)"
+                        ):
+                            db.mark_task_complete(
+                                st.session_state.current_notebook,
+                                current_day,
+                                idx,
+                                task_points
+                            )
+                            st.rerun()
+                
+                with col2:
+                    st.caption(f"{task_points}pts")
+        
+        # Progress summary
+        completed_count = sum(1 for idx, _ in enumerate(tasks) 
+                            if f"{current_day}_{idx}" in completed_tasks)
+        total_count = len(tasks)
+        st.progress(completed_count / total_count if total_count > 0 else 0)
+        st.caption(f"{completed_count}/{total_count} completed")
+    else:
+        st.info("📋 No schedule available. Create one in Study Scheduler!")
 
 def display_upload_section():
     """Display the PDF upload section."""
@@ -144,7 +235,7 @@ def display_upload_section():
                 # Generate summary and topics using Gemini
                 st.info("🤖 Generating summary and extracting key topics...")
                 prompt_config = load_prompt('summary_prompt.json')
-                summary_response = call_gemini(prompt_config, text_content[:10000])  # Limit to first 10k chars for summary
+                summary_response = call_gemini(prompt_config, text_content)  # Use full text for complete summary
                 
                 # Parse the summary (assuming it returns summary and topics)
                 # For now, we'll store the whole response as summary

@@ -3,8 +3,12 @@ Quiz Page - Interactive quiz generation (Placeholder)
 """
 import streamlit as st
 from utils.db import Database
+from utils.sidebar_utils import show_sidebar_on_all_pages
 
 st.set_page_config(page_title="Quiz", page_icon="📝", layout="wide")
+
+# Show common sidebar on all pages
+show_sidebar_on_all_pages()
 
 db = Database()
 

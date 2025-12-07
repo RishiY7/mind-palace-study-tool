@@ -1,55 +1,38 @@
 """
-Text extraction utilities using Hugging Face models.
+Text extraction utilities using ONNX embeddings.
 Intelligently extracts topic-relevant content from documents.
+Uses local ONNX model (./onxx/model_int8.onnx) for fast, efficient inference.
 """
 
 try:
-    from sentence_transformers import SentenceTransformer
     from sklearn.metrics.pairwise import cosine_similarity
     import numpy as np
-    HF_AVAILABLE = True
-except ImportError:
-    HF_AVAILABLE = False
-    print("Warning: Hugging Face models not installed. Install with: pip install sentence-transformers scikit-learn")
+    from .onnx_embedder import embed_texts, embed_query
+    EMBEDDINGS_AVAILABLE = True
+except ImportError as e:
+    EMBEDDINGS_AVAILABLE = False
+    print(f"Warning: Embedding system not initialized: {e}")
 
 class TopicAwareTextExtractor:
-    """Extract text relevant to a specific topic using semantic similarity."""
+    """Extract text relevant to a specific topic using ONNX semantic similarity."""
     
-    def __init__(self, model_name="nomic-ai/nomic-embed-text-v1.5", trust_remote_code=True):
-        """
-        Initialize with a Hugging Face sentence transformer model.
-        
-        Model options:
-        - "nomic-ai/nomic-embed-text-v1.5" (RECOMMENDED) - Best for long documents, 8192 token context
-        - "all-MiniLM-L6-v2" - Fast, lightweight, good for short text
-        - "all-mpnet-base-v2" - More accurate, slower
-        """
-        if not HF_AVAILABLE:
-            self.model = None
-            return
-        
-        try:
-            print(f"Loading Hugging Face model: {model_name}...")
-            self.model = SentenceTransformer(model_name, trust_remote_code=trust_remote_code)
-            print("✅ Model loaded successfully!")
-        except Exception as e:
-            print(f"❌ Error loading model: {e}")
-            self.model = None
+    def __init__(self):
+        """Initialize extractor with ONNX embeddings (lazy initialization)."""
+        self.embeddings_available = EMBEDDINGS_AVAILABLE
     
-    def extract_topic_text(self, text, topic, max_length=8000, overlap=500):
+    def extract_topic_text(self, text, topic, max_length=8000):
         """
-        Extract text most relevant to a specific topic using semantic similarity.
+        Extract text most relevant to a specific topic using ONNX semantic similarity.
         
         Args:
             text (str): Full document text
             topic (str): Topic to search for
             max_length (int): Maximum characters to return
-            overlap (int): Overlap between chunks for context
         
         Returns:
             str: Topic-relevant text excerpt (up to max_length chars)
         """
-        if not HF_AVAILABLE or self.model is None:
+        if not EMBEDDINGS_AVAILABLE:
             # Fallback to simple keyword search
             return self._fallback_extraction(text, topic, max_length)
         
@@ -60,22 +43,14 @@ class TopicAwareTextExtractor:
             if not sentences:
                 return text[:max_length]
             
-            # Encode topic with search prefix for nomic model
-            topic_embedding = self.model.encode(
-                f"search_query: {topic}", 
-                convert_to_tensor=False,
-                prompt_name="search_query"
-            )
+            # Encode topic query with search_query prefix
+            topic_embedding = embed_query(topic).reshape(1, -1)
             
-            # Encode all sentences with document prefix for nomic model
-            sentence_embeddings = self.model.encode(
-                [f"search_document: {s}" for s in sentences],
-                convert_to_tensor=False,
-                prompt_name="search_document"
-            )
+            # Encode all sentences with search_document prefix
+            sentence_embeddings = embed_texts(sentences, prefix="search_document:")
             
             # Calculate similarity between topic and each sentence
-            similarities = cosine_similarity([topic_embedding], sentence_embeddings)[0]
+            similarities = cosine_similarity(topic_embedding, sentence_embeddings)[0]
             
             # Get indices of most similar sentences
             top_indices = np.argsort(similarities)[::-1][:20]  # Get top 20 most similar
@@ -164,12 +139,12 @@ def get_topic_text(text, topic, use_semantic=True):
     Args:
         text (str): Full document text
         topic (str): Topic to extract
-        use_semantic (bool): Use semantic similarity (requires HF models)
+        use_semantic (bool): Use semantic similarity (requires ONNX embeddings)
     
     Returns:
         str: Extracted text relevant to the topic
     """
-    if use_semantic and HF_AVAILABLE:
+    if use_semantic and EMBEDDINGS_AVAILABLE:
         extractor = TopicAwareTextExtractor()
         return extractor.extract_topic_text(text, topic)
     else:

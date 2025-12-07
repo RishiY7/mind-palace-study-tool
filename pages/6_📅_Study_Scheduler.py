@@ -5,8 +5,12 @@ import streamlit as st
 import json
 from utils.db import Database
 from utils.helpers import load_prompt, call_gemini, parse_json_response
+from utils.sidebar_utils import show_sidebar_on_all_pages
 
 st.set_page_config(page_title="Study Scheduler", page_icon="📅", layout="wide")
+
+# Show common sidebar on all pages
+show_sidebar_on_all_pages()
 
 db = Database()
 
