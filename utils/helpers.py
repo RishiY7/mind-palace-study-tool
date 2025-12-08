@@ -1,17 +1,17 @@
 """
 Helper utilities for Mind Palace application.
-Uses modern Google GenAI SDK for all API calls.
+Uses Groq Cloud API with OpenAI models.
 """
 import json
 import os
 from PyPDF2 import PdfReader
-from google import genai
+from groq import Groq
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# Unified client for all Gemini API calls (modern SDK)
-client = genai.Client(api_key=os.getenv('GEMINI_API_KEY'))
+# Groq client for LLM API calls
+client = Groq(api_key=os.getenv('GROQ_API_KEY'))
 
 def load_prompt(prompt_file):
     """Load a prompt configuration from JSON file."""
@@ -29,7 +29,7 @@ def extract_text_from_pdf(pdf_file):
 
 def call_gemini(prompt_config, context_text="", target_text="", **kwargs):
     """
-    Call Gemini API for standard text generation using the modern SDK.
+    Call Groq API for standard text generation using OpenAI models.
     
     Args:
         prompt_config (dict): Dictionary with 'system_instruction' and 'user_instruction'
@@ -38,12 +38,18 @@ def call_gemini(prompt_config, context_text="", target_text="", **kwargs):
         **kwargs: Additional variables to format the user_instruction
     
     Returns:
-        str: Generated text response from Gemini
+        str: Generated text response from LLM
     """
-    model_name = os.getenv('GEMINI_MODEL', 'gemini-2.0-flash-exp')
+    model_name = os.getenv('GROQ_MODELS', 'openai/gpt-oss-120b')
     
     # Format user instruction with provided variables
-    format_vars = {'target_text': target_text, **kwargs}
+    # Supports multiple placeholder names for backward compatibility with different prompts
+    format_vars = {
+        'target_text': target_text,
+        'text': context_text,  # Support {text} placeholder
+        'topic': target_text,  # Support {topic} placeholder
+        **kwargs
+    }
     user_instruction = prompt_config['user_instruction'].format(**format_vars)
     
     # Build final prompt with clear structure
@@ -55,20 +61,31 @@ def call_gemini(prompt_config, context_text="", target_text="", **kwargs):
     # Get system instruction (optional)
     system_instruction = prompt_config.get('system_instruction', '')
     
-    # Call Gemini with modern SDK
-    response = client.models.generate_content(
+    # Build messages array
+    messages = []
+    if system_instruction:
+        messages.append({
+            "role": "system",
+            "content": system_instruction
+        })
+    messages.append({
+        "role": "user",
+        "content": full_prompt
+    })
+    
+    # Call Groq API
+    chat_completion = client.chat.completions.create(
+        messages=messages,
         model=model_name,
-        contents=full_prompt,
-        config={
-            "system_instruction": system_instruction
-        } if system_instruction else {}
+        temperature=0.7,
+        max_tokens=4096
     )
     
-    return response.text
+    return chat_completion.choices[0].message.content
 
 def parse_json_response(response_text):
     """
-    Extract and parse JSON from Gemini response.
+    Extract and parse JSON from LLM response.
     Handles cases where JSON is wrapped in markdown code blocks.
     """
     # Try to extract JSON from markdown code blocks
@@ -111,34 +128,65 @@ def chunk_text(text, max_length=5000):
     return chunks
 
 
-def call_gemini_structured(prompt_text, schema_class, model_name="gemini-2.0-flash"):
+def call_gemini_structured(prompt_text, schema_class, model_name="openai/gpt-oss-120b"):
     """
-    Call Gemini API with structured output using Pydantic schema.
+    Call Groq API with structured output using Pydantic schema.
+    
+    Follows Groq's schema requirements:
+    - All properties must be required (optional fields not supported)
+    - additionalProperties must be false (enforced via ConfigDict(extra='forbid'))
+    - Supports: primitives, objects, arrays, enums, anyOf
     
     Args:
-        prompt_text (str): The prompt to send to Gemini
-        schema_class: Pydantic BaseModel class defining the expected structure
-        model_name (str): Gemini model to use (default: gemini-2.0-flash-exp)
+        prompt_text (str): The prompt to send to LLM
+        schema_class: Pydantic BaseModel with ConfigDict(extra='forbid')
+        model_name (str): Model to use (default: openai/gpt-oss-120b)
     
     Returns:
         Instance of schema_class with validated data
     
-    Example:
-        from pydantic import BaseModel
-        class Recipe(BaseModel):
-            name: str
-            ingredients: list[str]
+    Raises:
+        ValueError: If response doesn't match schema
         
-        result = call_gemini_structured("Extract recipe...", Recipe)
+    Example:
+        from pydantic import BaseModel, ConfigDict
+        
+        class QuizData(BaseModel):
+            model_config = ConfigDict(extra='forbid')
+            questions: list[QuizQuestion]
+        
+        result = call_gemini_structured("Generate quiz...", QuizData)
     """
-    response = client.models.generate_content(
+    # Call Groq API with JSON schema response format
+    response = client.chat.completions.create(
         model=model_name,
-        contents=prompt_text,
-        config={
-            "response_mime_type": "application/json",
-            "response_schema": schema_class,
+        messages=[
+            {
+                "role": "system",
+                "content": "You are a helpful assistant. Output JSON only using the schema provided."
+            },
+            {
+                "role": "user",
+                "content": prompt_text
+            }
+        ],
+        response_format={
+            "type": "json_schema",
+            "json_schema": {
+                "name": schema_class.__name__.lower(),
+                "schema": schema_class.model_json_schema()
+            }
         },
+        temperature=0.7,
+        max_tokens=4096
     )
     
-    # Validate and return as Pydantic model instance
-    return schema_class.model_validate_json(response.text)
+    # Parse and validate response using Pydantic
+    # Following Groq's example pattern: json.loads() -> model_validate()
+    try:
+        raw_result = json.loads(response.choices[0].message.content or "{}")
+        return schema_class.model_validate(raw_result)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON response from Groq: {e}")
+    except Exception as e:
+        raise ValueError(f"Schema validation failed: {e}")

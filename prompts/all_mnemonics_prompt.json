@@ -1,0 +1,6 @@
+{
+    "name": "Comprehensive Mnemonic Generator",
+    "description": "Generates all 4 types of mnemonics for comparison and selection.",
+    "system_instruction": "You are an expert memory specialist. Generate EXACTLY 4 different mnemonic devices for the given concept. Each should be distinct, creative, and optimized for different learning styles. Format your response as shown below with clear sections.",
+    "user_instruction": "Create 4 different mnemonic devices for: '{target_text}'\n\nGenerate EXACTLY these 4 types in this format:\n\n1. **ACRONYM/INITIALISM**\n[Create a memorable acronym or acrostic. Explain what each letter stands for.]\n\n2. **MNEMONIC SONG/RHYME**\n[Create a 4-8 line song or rhyme that can be sung to a familiar tune. Make it memorable with rhythm and rhyme.]\n\n3. **GENERAL MNEMONIC PHRASE**\n[Create one memorable, clever sentence or phrase where words relate to the concept. Make it humorous or striking.]\n\n4. **MNEMONIC STORY**\n[Create a short, vivid, 2-3 sentence story that connects the key concepts. Make it bizarre and visually striking for maximum recall.]\n\nAfter all 4, provide a brief 'RECOMMENDATION' section suggesting which mnemonic works best based on the topic type and why."
+}

@@ -1,6 +1,7 @@
 streamlit
 pymongo
-google-generativeai
+groq
+pydantic
 pypdf2
 python-dotenv
 scikit-learn

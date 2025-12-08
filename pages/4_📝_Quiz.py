@@ -5,7 +5,7 @@ import streamlit as st
 import json
 import time
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List
 from utils.db import Database
 from utils.sidebar_utils import show_sidebar_on_all_pages
@@ -22,12 +22,16 @@ db = Database()
 # Define Pydantic schemas for structured output
 class QuizQuestion(BaseModel):
     """Single quiz question with multiple choice options."""
+    model_config = ConfigDict(extra="forbid")  # Enforce additionalProperties: false
+    
     text: str = Field(description="The question text")
     options: List[str] = Field(description="List of 4 answer options")
     answer: int = Field(description="Index (0-3) of the correct answer")
 
 class QuizData(BaseModel):
     """Complete quiz with multiple questions."""
+    model_config = ConfigDict(extra="forbid")  # Enforce additionalProperties: false
+    
     questions: List[QuizQuestion] = Field(description="List of quiz questions")
 
 st.title("📝 Interactive Quiz")
@@ -103,8 +107,8 @@ Text content:
 
 Generate {num_questions} questions now."""
                             
-                            # Call Gemini with structured output (Pydantic schema)
-                            quiz_data = call_gemini_structured(prompt, QuizData)
+                            # Call Groq with structured output (Pydantic schema)
+                            quiz_data = call_gemini_structured(prompt, QuizData, model_name="openai/gpt-oss-120b")
                             
                             # Convert Pydantic model to dict for storage
                             quiz_dict = quiz_data.model_dump()

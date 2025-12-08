@@ -2,5 +2,5 @@
     "name": "Flashcard Generator",
     "description": "Generates question/answer flashcards for a specific topic.",
     "system_instruction": "You are an expert tutor. Your goal is to help students learn by creating effective flashcards.",
-    "user_instruction": "Based on the provided text for the topic '{topic}', generate 5 flashcards. Each flashcard should have a 'question' and an 'answer'. Return the result as a JSON array of objects with 'question' and 'answer' keys."
+    "user_instruction": "Based on the provided text for the topic '{target_text}', generate 5 flashcards. Each flashcard should have a 'question' and an 'answer'. Return the result as a JSON array of objects with 'question' and 'answer' keys."
 }

@@ -23,14 +23,18 @@ GENERATOR_OPTIONS = {
 # --- End Configuration ---
 
 st.title("🧠 Memory Aid Generator")
-st.markdown("Generate various memory devices: **Acronyms**, **Songs**, **Phrases**, or **Stories**!")
+st.markdown("Generate various memory devices: **Acronyms**, **Songs**, **Phrases**, **Stories**, or **All at Once**!")
 
-# --- Generator Selection ---
-selected_generator = st.selectbox(
-    "Choose the type of memory aid:",
-    options=list(GENERATOR_OPTIONS.keys()),
-    key="generator_type"
-)
+# --- Generator Selection with "All Mnemonics" Option ---
+col1, col2 = st.columns([3, 1])
+with col1:
+    selected_generator = st.selectbox(
+        "Choose the type of memory aid:",
+        options=["✨ All Mnemonics (Compare All 4)"] + list(GENERATOR_OPTIONS.keys()),
+        key="generator_type"
+    )
+with col2:
+    st.info("💡 **Tip:** Select 'All Mnemonics' to compare all 4 types and pick the best one!")
 # --- End Generator Selection ---
 
 
@@ -50,15 +54,23 @@ else:
             """
             Core function that handles all generation types.
             It dynamically loads the correct prompt based on the selected generator.
+            Supports single mnemonics or all 4 at once.
             """
             generator_type = st.session_state.generator_type
-            prompt_filename = GENERATOR_OPTIONS.get(generator_type)
+            
+            # Handle "All Mnemonics" special case
+            if generator_type == "✨ All Mnemonics (Compare All 4)":
+                prompt_filename = "all_mnemonics_prompt.json"
+                display_type = "All Mnemonics Comparison"
+            else:
+                prompt_filename = GENERATOR_OPTIONS.get(generator_type)
+                display_type = generator_type
 
             if not prompt_filename:
                 st.error(f"Error: Unknown generator type '{generator_type}'.")
                 return
 
-            with st.spinner(f"Creating {generator_type} for '{concept_text}'..."):
+            with st.spinner(f"Creating {display_type} for '{concept_text}'..."):
                 try:
                     # 1. Dynamically load the correct JSON prompt
                     prompt_config = load_prompt(prompt_filename) 
@@ -72,17 +84,21 @@ else:
                     
                     st.session_state.generator_result = response
                     st.session_state.generator_concept = concept_text
-                    st.session_state.generator_type_used = generator_type
-                    st.success(f"{generator_type} successfully generated for **{concept_text}**!")
+                    st.session_state.generator_type_used = display_type
+                    st.success(f"{display_type} successfully generated for **{concept_text}**!")
 
                 except Exception as e:
-                    st.error(f"Error generating {generator_type}. Check prompt files or API connection.")
+                    st.error(f"Error generating {display_type}. Check prompt files or API connection.")
                     st.exception(e)
         # --- End Unified Generation Function ---
         
         
         topics = notebook.get('topics', [])
         tab1, tab2 = st.tabs(["📚 From Topics", "✍️ Custom Text"])
+        
+        # Determine button text based on selection
+        button_text = "🎯 Generate All Mnemonics from Topic" if selected_generator == "✨ All Mnemonics (Compare All 4)" else f"🧠 Generate {selected_generator} from Topic"
+        button_text_custom = "🎯 Generate All Mnemonics from Custom Text" if selected_generator == "✨ All Mnemonics (Compare All 4)" else f"🧠 Generate {selected_generator} from Custom Text"
         
         # --- TAB 1: From Topics ---
         with tab1:
@@ -93,7 +109,7 @@ else:
                     key="topic_concept"
                 )
                 
-                if st.button(f"🧠 Generate {selected_generator} from Topic", type="primary"):
+                if st.button(button_text, type="primary"):
                     with st.spinner(f"🔍 Extracting content for '{selected_topic}'..."):
                         text_content = notebook.get('text_content', '')
                         # This line likely calls the embedding model
@@ -112,7 +128,7 @@ else:
                 key="custom_text_input"
             )
             
-            if st.button(f"🧠 Generate {selected_generator} from Custom Text", type="primary"):
+            if st.button(button_text_custom, type="primary"):
                 if custom_text.strip():
                     # context_text is "" for custom text, concept_text is the input
                     run_generation("", custom_text) 
@@ -123,26 +139,48 @@ else:
         # --- Display Result (Unified) ---
         if 'generator_result' in st.session_state:
             st.divider()
-            st.subheader(f"🎯 Generated {st.session_state.generator_type_used}")
+            st.subheader(f"🎯 {st.session_state.generator_type_used}")
             
             st.info(f"**Concept:** {st.session_state.get('generator_concept', 'N/A')}")
             
-            st.markdown(f"""
-            <div style="padding: 1.5rem; border-radius: 10px; background-color: #f0f0f5; 
-                         border-left: 5px solid #4A90E2;">
+            # Special formatting for "All Mnemonics Comparison"
+            if st.session_state.generator_type_used == "All Mnemonics Comparison":
+                # Display all mnemonics using markdown with better formatting
+                st.markdown(st.session_state.generator_result)
+                
+                st.divider()
+                st.subheader("📊 Comparison Guide")
+                st.markdown("""
+                ** reviewing all 4 mnemonics, consider:**     
+                """)
+            else:
+                # Single mnemonic display with markdown formatting
+                st.markdown(f"""
+                ## 🎯 Your Mnemonic
+                
                 {st.session_state.generator_result}
-            </div>
-            """, unsafe_allow_html=True)
-            
-            st.divider()
-            st.subheader("💡 Memory Tips")
-            st.markdown("""
-            **How to use mnemonics effectively:**
-            
-            1. 🔄 **Review regularly** - Practice the memory aid daily for best retention.
-            2. 🎨 **Visualize** - Create mental images for the concept.
-            3. 📝 **Write it down** - Writing helps reinforce memory.
-            """)
+                """)
+                
+                st.divider()
+                st.subheader("💡 Memory Tips")
+                st.markdown("""
+                **How to use this mnemonic effectively:**
+                
+                1. 🔄 **Review regularly** - Practice the memory aid daily for best retention.
+                2. 🎨 **Visualize** - Create mental images for the concept.
+                3. 📝 **Write it down** - Writing helps reinforce memory.
+                4. 🤝 **Share it** - Explaining to others reinforces learning.
+                5. ✏️ **Personalize it** - Modify the mnemonic to fit YOUR style better.
+                
+                ---
+                
+                ### 📌 Pro Tips
+                
+                - **For Acronyms:** Create visual associations for each letter
+                - **For Songs:** Practice singing/reciting it 5 times daily
+                - **For Phrases:** Write it on sticky notes around your study space
+                - **For Stories:** Draw the story or act it out with friends
+                """)
             
     else:
         st.error("Notebook not found!")
