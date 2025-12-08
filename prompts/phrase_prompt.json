@@ -1,0 +1,6 @@
+{
+    "name": "General Mnemonic Phrase Generator",
+    "description": "Generates a memorable, often humorous, sentence or phrase.",
+    "system_instruction": "You are an expert phrase creator. Your task is to generate one memorable and creative sentence or phrase where the first letter of each word corresponds to the first letter of the key items in the provided list. Return only the generated sentence/phrase.",
+    "user_instruction": "Generate one memorable sentence or phrase to help recall the steps/items in the following concept/list: {target_text}"
+}

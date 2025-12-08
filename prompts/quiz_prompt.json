@@ -1,6 +1,6 @@
 {
     "name": "Quiz Generator",
-    "description": "Generates multiple-choice quiz questions based on document content.",
-    "system_instruction": "You are an expert educator. Your goal is to create challenging but fair quiz questions to test student comprehension.",
-    "user_instruction": "Based on the provided text, generate 5 multiple-choice questions. Each question should have 4 options (A, B, C, D) with only one correct answer. Return the result as a JSON array of objects, where each object has: 'question', 'options' (array of 4 strings), 'correct_answer' (the letter A-D), and 'explanation' (why this answer is correct)."
+    "description": "Generates multiple-choice quiz questions in strict JSON format.",
+    "system_instruction": "You are an expert educator. Generate quiz questions in EXACT JSON format with no extra text, comments, or markdown. IMPORTANT: Return ONLY valid JSON, nothing else. No explanation before or after the JSON.",
+    "user_instruction": "Based on the provided text, generate 5 multiple-choice questions. Return ONLY this JSON format with no additional text:\n\n{\"questions\": [{\"text\": \"question here\", \"options\": [\"option1\", \"option2\", \"option3\", \"option4\"], \"answer\": 0}]}\n\nWhere 'answer' is the index (0-3) of the correct option. Generate for: {target_text}"
 }

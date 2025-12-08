@@ -1,22 +1,28 @@
 """
-Database utilities for Mind Palace MongoDB operations.
+Database utilities for Mind Palace - MongoDB with optimized nested schema.
+Single notebook document contains all related data: schedule, flashcards, quizzes, acronyms, progress.
 """
+
 from pymongo import MongoClient
 from datetime import datetime
+from bson.objectid import ObjectId
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
+
 
 class Database:
     def __init__(self):
         self.client = MongoClient(os.getenv('MONGODB_URI'))
         self.db = self.client['mind_palace']
         self.notebooks = self.db['notebooks']
-        self.progress = self.db['progress']
-        
+        self.notebooks.create_index('created_at')  # Index for sorting
+    
+    # ============ NOTEBOOK OPERATIONS ============
+    
     def save_notebook(self, filename, pdf_content, text_content, summary, topics):
-        """Save a new notebook to the database."""
+        """Save a new notebook with optimized nested schema."""
         notebook = {
             'filename': filename,
             'pdf_content': pdf_content,
@@ -24,72 +30,325 @@ class Database:
             'summary': summary,
             'topics': topics,
             'created_at': datetime.now(),
-            'updated_at': datetime.now()
+            'updated_at': datetime.now(),
+            
+            # Nested arrays (initially empty)
+            'schedule': [],
+            'flashcards': [],
+            'quizzes': [],
+            'acronyms': [],
+            'progress': {
+                'completed_tasks': [],
+                'total_score': 0,
+                'last_activity': None,
+                'topic_mastery': {},  # {topic_name: mastery_percentage}
+                'quiz_average': 0,
+                'study_streak': 0
+            }
         }
         result = self.notebooks.insert_one(notebook)
         return str(result.inserted_id)
     
     def get_notebook(self, notebook_id):
         """Retrieve a notebook by ID."""
-        from bson.objectid import ObjectId
         return self.notebooks.find_one({'_id': ObjectId(notebook_id)})
     
     def get_all_notebooks(self):
-        """Get all notebooks."""
+        """Get all notebooks sorted by creation date (newest first)."""
         return list(self.notebooks.find().sort('created_at', -1))
     
     def update_notebook(self, notebook_id, update_data):
         """Update notebook data."""
-        from bson.objectid import ObjectId
         update_data['updated_at'] = datetime.now()
         return self.notebooks.update_one(
             {'_id': ObjectId(notebook_id)},
             {'$set': update_data}
         )
     
+    def delete_notebook(self, notebook_id):
+        """Delete a notebook and all its nested data."""
+        self.notebooks.delete_one({'_id': ObjectId(notebook_id)})
+    
+    # ============ SCHEDULE OPERATIONS ============
+    
     def save_schedule(self, notebook_id, schedule, days):
-        """Save study schedule for a notebook."""
-        self.update_notebook(notebook_id, {
+        """Save study schedule to notebook."""
+        return self.update_notebook(notebook_id, {
             'schedule': schedule,
             'schedule_days': days
         })
     
-    def get_progress(self, notebook_id):
-        """Get progress for a notebook."""
-        from bson.objectid import ObjectId
-        progress = self.progress.find_one({'notebook_id': notebook_id})
-        if not progress:
-            # Initialize progress
-            progress = {
-                'notebook_id': notebook_id,
-                'completed_tasks': [],
-                'total_score': 0,
+    def get_schedule(self, notebook_id):
+        """Retrieve schedule from notebook."""
+        notebook = self.get_notebook(notebook_id)
+        if notebook:
+            return notebook.get('schedule', [])
+        return []
+    
+    # ============ FLASHCARD OPERATIONS ============
+    
+    def add_flashcards(self, notebook_id, topic, cards_list):
+        """
+        Add flashcards to notebook for a specific topic.
+        cards_list format: [{'question': '...', 'answer': '...', 'difficulty': 'easy'}, ...]
+        """
+        flashcards_with_metadata = []
+        for card in cards_list:
+            flashcard = {
+                '_id': ObjectId(),
+                'topic': topic,
+                'question': card.get('question', ''),
+                'answer': card.get('answer', ''),
+                'difficulty': card.get('difficulty', 'medium'),
+                'review_count': 0,
+                'mastery_level': 'learning',  # learning, familiar, mastered
+                'last_reviewed': None,
                 'created_at': datetime.now()
             }
-            self.progress.insert_one(progress)
-        return progress
+            flashcards_with_metadata.append(flashcard)
+        
+        return self.notebooks.update_one(
+            {'_id': ObjectId(notebook_id)},
+            {
+                '$push': {'flashcards': {'$each': flashcards_with_metadata}},
+                '$set': {'updated_at': datetime.now()}
+            }
+        )
+    
+    def get_flashcards(self, notebook_id, topic=None):
+        """Retrieve flashcards from notebook, optionally filtered by topic."""
+        notebook = self.get_notebook(notebook_id)
+        if notebook:
+            flashcards = notebook.get('flashcards', [])
+            if topic:
+                return [card for card in flashcards if card.get('topic') == topic]
+            return flashcards
+        return []
+    
+    def update_flashcard_review(self, notebook_id, flashcard_id, mastery_level=None):
+        """Update flashcard review count and mastery level."""
+        update_data = {
+            'flashcards.$.last_reviewed': datetime.now(),
+            'updated_at': datetime.now()
+        }
+        if mastery_level:
+            update_data['flashcards.$.mastery_level'] = mastery_level
+        
+        return self.notebooks.update_one(
+            {
+                '_id': ObjectId(notebook_id),
+                'flashcards._id': ObjectId(flashcard_id)
+            },
+            {
+                '$inc': {'flashcards.$.review_count': 1},
+                '$set': update_data
+            }
+        )
+    
+    # ============ QUIZ OPERATIONS ============
+    
+    def save_quiz(self, notebook_id, topic, questions_json):
+        """
+        Save a quiz to notebook.
+        questions_json format: {'questions': [{'text': '...', 'options': [...], 'answer': 0}, ...]}
+        """
+        quiz = {
+            '_id': ObjectId(),
+            'topic': topic,
+            'questions': questions_json.get('questions', []),
+            'attempts': [],
+            'created_at': datetime.now()
+        }
+        
+        return self.notebooks.update_one(
+            {'_id': ObjectId(notebook_id)},
+            {
+                '$push': {'quizzes': quiz},
+                '$set': {'updated_at': datetime.now()}
+            }
+        )
+    
+    def get_quizzes(self, notebook_id, topic=None):
+        """Retrieve quizzes from notebook, optionally filtered by topic."""
+        notebook = self.get_notebook(notebook_id)
+        if notebook:
+            quizzes = notebook.get('quizzes', [])
+            if topic:
+                return [q for q in quizzes if q.get('topic') == topic]
+            return quizzes
+        return []
+    
+    def save_quiz_attempt(self, notebook_id, quiz_id, user_answers, score, time_spent):
+        """
+        Save a quiz attempt to quiz.attempts array.
+        user_answers: list of selected option indices (0-3)
+        score: points earned
+        time_spent: time in seconds
+        """
+        attempt = {
+            'user_answers': user_answers,
+            'score': score,
+            'percentage': 0,  # Will be calculated
+            'time_spent': time_spent,
+            'date_taken': datetime.now()
+        }
+        
+        # Find quiz by ID and add attempt
+        return self.notebooks.update_one(
+            {
+                '_id': ObjectId(notebook_id),
+                'quizzes._id': ObjectId(quiz_id)
+            },
+            {
+                '$push': {'quizzes.$.attempts': attempt},
+                '$set': {'updated_at': datetime.now()}
+            }
+        )
+    
+    def get_quiz_history(self, notebook_id, topic=None):
+        """Get quiz history with attempts."""
+        quizzes = self.get_quizzes(notebook_id, topic)
+        history = []
+        for quiz in quizzes:
+            for attempt in quiz.get('attempts', []):
+                history.append({
+                    'topic': quiz.get('topic'),
+                    'quiz_id': str(quiz.get('_id')),
+                    'score': attempt.get('score'),
+                    'percentage': attempt.get('percentage'),
+                    'time_spent': attempt.get('time_spent'),
+                    'date_taken': attempt.get('date_taken')
+                })
+        return history
+    
+    # ============ ACRONYM/MEMORY AID OPERATIONS ============
+    
+    def add_acronym(self, notebook_id, topic, generator_type, content, explanation=''):
+        """
+        Save a generated memory aid (acronym, song, phrase, story).
+        generator_type: 'Acronym', 'Song', 'Phrase', or 'Story'
+        """
+        acronym = {
+            '_id': ObjectId(),
+            'topic': topic,
+            'type': generator_type,
+            'content': content,
+            'explanation': explanation,
+            'usefulness_rating': 0,
+            'created_at': datetime.now()
+        }
+        
+        return self.notebooks.update_one(
+            {'_id': ObjectId(notebook_id)},
+            {
+                '$push': {'acronyms': acronym},
+                '$set': {'updated_at': datetime.now()}
+            }
+        )
+    
+    def get_acronyms(self, notebook_id, topic=None, generator_type=None):
+        """Retrieve memory aids, optionally filtered by topic or type."""
+        notebook = self.get_notebook(notebook_id)
+        if notebook:
+            acronyms = notebook.get('acronyms', [])
+            if topic:
+                acronyms = [a for a in acronyms if a.get('topic') == topic]
+            if generator_type:
+                acronyms = [a for a in acronyms if a.get('type') == generator_type]
+            return acronyms
+        return []
+    
+    def rate_acronym(self, notebook_id, acronym_id, rating):
+        """Rate a memory aid's usefulness (1-5)."""
+        return self.notebooks.update_one(
+            {
+                '_id': ObjectId(notebook_id),
+                'acronyms._id': ObjectId(acronym_id)
+            },
+            {
+                '$set': {
+                    'acronyms.$.usefulness_rating': rating,
+                    'updated_at': datetime.now()
+                }
+            }
+        )
+    
+    # ============ PROGRESS OPERATIONS ============
     
     def mark_task_complete(self, notebook_id, day, task_index, points):
-        """Mark a task as completed and add points."""
-        from bson.objectid import ObjectId
+        """Mark a study scheduler task as complete and add points."""
         task_id = f"{day}_{task_index}"
+        notebook = self.get_notebook(notebook_id)
         
-        progress = self.get_progress(notebook_id)
-        
-        if task_id not in progress.get('completed_tasks', []):
-            self.progress.update_one(
-                {'notebook_id': notebook_id},
-                {
-                    '$push': {'completed_tasks': task_id},
-                    '$inc': {'total_score': points},
-                    '$set': {'updated_at': datetime.now()}
-                }
-            )
-            return True
-        return False
+        if notebook:
+            progress = notebook.get('progress', {})
+            completed_tasks = progress.get('completed_tasks', [])
+            
+            if task_id not in completed_tasks:
+                return self.notebooks.update_one(
+                    {'_id': ObjectId(notebook_id)},
+                    {
+                        '$push': {'progress.completed_tasks': task_id},
+                        '$inc': {'progress.total_score': points},
+                        '$set': {
+                            'progress.last_activity': datetime.now(),
+                            'updated_at': datetime.now()
+                        }
+                    }
+                )
+        return None
     
-    def delete_notebook(self, notebook_id):
-        """Delete a notebook and its progress."""
-        from bson.objectid import ObjectId
-        self.notebooks.delete_one({'_id': ObjectId(notebook_id)})
-        self.progress.delete_many({'notebook_id': notebook_id})
+    def update_progress(self, notebook_id, progress_data):
+        """Update progress object with custom data."""
+        progress_data['last_activity'] = datetime.now()
+        return self.update_notebook(notebook_id, {'progress': progress_data})
+    
+    def get_progress(self, notebook_id):
+        """Retrieve progress from notebook."""
+        notebook = self.get_notebook(notebook_id)
+        if notebook:
+            return notebook.get('progress', {
+                'completed_tasks': [],
+                'total_score': 0,
+                'last_activity': None,
+                'topic_mastery': {},
+                'quiz_average': 0,
+                'study_streak': 0
+            })
+        return {}
+    
+    def update_topic_mastery(self, notebook_id, topic, mastery_percentage):
+        """Update mastery percentage for a specific topic."""
+        return self.notebooks.update_one(
+            {'_id': ObjectId(notebook_id)},
+            {
+                '$set': {
+                    f'progress.topic_mastery.{topic}': mastery_percentage,
+                    'updated_at': datetime.now()
+                }
+            }
+        )
+    
+    def update_quiz_average(self, notebook_id, average_score):
+        """Update the average quiz score in progress."""
+        return self.notebooks.update_one(
+            {'_id': ObjectId(notebook_id)},
+            {
+                '$set': {
+                    'progress.quiz_average': average_score,
+                    'updated_at': datetime.now()
+                }
+            }
+        )
+    
+    def update_study_streak(self, notebook_id, streak_count):
+        """Update the study streak counter."""
+        return self.notebooks.update_one(
+            {'_id': ObjectId(notebook_id)},
+            {
+                '$set': {
+                    'progress.study_streak': streak_count,
+                    'updated_at': datetime.now()
+                }
+            }
+        )
