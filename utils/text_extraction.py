@@ -32,6 +32,10 @@ class TopicAwareTextExtractor:
         Returns:
             str: Topic-relevant text excerpt (up to max_length chars)
         """
+        # Handle None or empty topic
+        if not topic:
+            return text[:max_length]
+        
         if not EMBEDDINGS_AVAILABLE:
             # Fallback to simple keyword search
             return self._fallback_extraction(text, topic, max_length)
@@ -98,6 +102,10 @@ class TopicAwareTextExtractor:
     
     def _fallback_extraction(self, text, topic, max_length):
         """Fallback: Simple keyword-based extraction."""
+        # Handle None topic
+        if not topic:
+            return text[:max_length]
+        
         # Try to find the topic in the text
         topic_lower = topic.lower()
         text_lower = text.lower()
@@ -154,6 +162,10 @@ def get_topic_text(text, topic, use_semantic=True):
 
 def _simple_keyword_extraction(text, topic, max_length=8000):
     """Simple keyword-based extraction (no HF models required)."""
+    # Handle None or empty topic
+    if not topic:
+        return text[:max_length]
+    
     topic_lower = topic.lower()
     text_lower = text.lower()
     

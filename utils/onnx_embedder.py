@@ -11,12 +11,12 @@ import os
 class OnnxEmbedder:
     """Embed text using ONNX Runtime with nomic-embed-text-v1.5 model."""
     
-    def __init__(self, model_path="onxx/model_int8.onnx"):
+    def __init__(self, model_path="onnx/model_int8.onnx"):
         """
         Initialize ONNX embedder with local model.
         
         Args:
-            model_path (str): Path to ONNX model file (default: ./onxx/model_int8.onnx)
+            model_path (str): Path to ONNX model file (default: ./onnx/model_int8.onnx)
         """
         self.model_path = model_path
         self.tokenizer = None

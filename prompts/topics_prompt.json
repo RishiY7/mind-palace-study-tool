@@ -1,6 +1,6 @@
 {
     "name": "Topic Extraction",
-    "description": "Intelligently extracts the 10 most important topics/concepts from a document.",
+    "description": "Intelligently extracts the all important topics/concepts from a document.",
     "system_instruction": "You are an expert document analyst and educator. Your task is to identify the most important and relevant topics from educational materials. You understand context, importance, and how concepts relate to each other.",
-    "user_instruction": "Analyze the provided text and extract the 10 most important topics or key concepts. These should be the main subjects/themes that a student should focus on. Return ONLY a JSON array with topic names (strings), like this: [\"Topic 1\", \"Topic 2\", \"Topic 3\", ...]. Do not include any other text or explanation, just the JSON array."
+    "user_instruction": "Analyze the provided text and extract the all important topics or key concepts. These should be the main subjects/themes that a student should focus on. Return ONLY a JSON array with topic names (strings), like this: [\"Topic 1\", \"Topic 2\", \"Topic 3\", ...]. Do not include any other text or explanation, just the JSON array."
 }
