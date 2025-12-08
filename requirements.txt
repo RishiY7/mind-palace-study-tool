@@ -4,7 +4,6 @@ groq
 pydantic
 pypdf2
 python-dotenv
-scikit-learn
 nltk
 onnxruntime
 numpy

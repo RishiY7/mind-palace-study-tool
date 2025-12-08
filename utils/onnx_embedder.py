@@ -87,13 +87,19 @@ class OnnxEmbedder:
         input_ids = encoded["input_ids"].astype(np.int64)
         attention_mask = encoded["attention_mask"].astype(np.int64)
         
-        embeddings = self.session.run(
-            None,
-            {
-                "input_ids": input_ids,
-                "attention_mask": attention_mask
-            }
-        )[0]
+        # Check if model expects token_type_ids
+        input_names = [inp.name for inp in self.session.get_inputs()]
+        onnx_inputs = {
+            "input_ids": input_ids,
+            "attention_mask": attention_mask
+        }
+        
+        # Add token_type_ids if required by the model
+        if "token_type_ids" in input_names:
+            token_type_ids = np.zeros_like(input_ids, dtype=np.int64)
+            onnx_inputs["token_type_ids"] = token_type_ids
+        
+        embeddings = self.session.run(None, onnx_inputs)[0]
         
         # L2 normalization
         embeddings = embeddings.astype(np.float32)

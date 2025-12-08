@@ -85,6 +85,15 @@ else:
                     st.session_state.generator_result = response
                     st.session_state.generator_concept = concept_text
                     st.session_state.generator_type_used = display_type
+                    
+                    # Save to database
+                    db.add_acronym(
+                        st.session_state.current_notebook,
+                        topic=concept_text,
+                        generator_type=display_type,
+                        content=response
+                    )
+                    
                     st.success(f"{display_type} successfully generated for **{concept_text}**!")
 
                 except Exception as e:
@@ -94,7 +103,7 @@ else:
         
         
         topics = notebook.get('topics', [])
-        tab1, tab2 = st.tabs(["📚 From Topics", "✍️ Custom Text"])
+        tab1, tab2, tab3 = st.tabs(["📚 From Topics", "✍️ Custom Text", "🗂️ View Previous"])
         
         # Determine button text based on selection
         button_text = "🎯 Generate All Mnemonics from Topic" if selected_generator == "✨ All Mnemonics (Compare All 4)" else f"🧠 Generate {selected_generator} from Topic"
@@ -134,6 +143,67 @@ else:
                     run_generation("", custom_text) 
                 else:
                     st.warning("Please enter some text first!")
+        
+        # --- TAB 3: View Previous ---
+        with tab3:
+            st.markdown("### 🗂️ Previously Generated Memory Aids")
+            
+            # Get all acronyms for this notebook
+            all_acronyms = db.get_acronyms(st.session_state.current_notebook)
+            
+            if not all_acronyms:
+                st.info("No memory aids generated yet. Create your first one in the other tabs!")
+            else:
+                # Filter options
+                col1, col2 = st.columns(2)
+                with col1:
+                    filter_type = st.selectbox(
+                        "Filter by type:",
+                        ["All Types"] + list(GENERATOR_OPTIONS.keys()) + ["All Mnemonics Comparison"],
+                        key="filter_type"
+                    )
+                
+                # Apply filter
+                filtered_acronyms = all_acronyms
+                if filter_type != "All Types":
+                    filtered_acronyms = [a for a in all_acronyms if a.get('type') == filter_type]
+                
+                st.caption(f"Showing {len(filtered_acronyms)} of {len(all_acronyms)} memory aids")
+                
+                # Display acronyms
+                for i, acronym in enumerate(reversed(filtered_acronyms)):  # Newest first
+                    topic = acronym.get('topic', 'Unknown')
+                    mnem_type = acronym.get('type', 'Unknown')
+                    content = acronym.get('content', '')
+                    created_at = acronym.get('created_at', 'Unknown')
+                    rating = acronym.get('usefulness_rating', 0)
+                    
+                    if hasattr(created_at, 'strftime'):
+                        created_str = created_at.strftime("%b %d, %Y %I:%M %p")
+                    else:
+                        created_str = str(created_at)
+                    
+                    with st.expander(f"{'⭐' * rating if rating > 0 else '☆'} {mnem_type} - {topic} ({created_str})"):
+                        st.markdown(content)
+                        
+                        # Rating system
+                        st.divider()
+                        col1, col2 = st.columns([3, 1])
+                        with col1:
+                            new_rating = st.slider(
+                                "Usefulness Rating:",
+                                0, 5, rating,
+                                key=f"rating_{acronym.get('_id')}"
+                            )
+                        with col2:
+                            if st.button("💾 Save Rating", key=f"save_rating_{acronym.get('_id')}"):
+                                db.rate_acronym(
+                                    st.session_state.current_notebook,
+                                    str(acronym.get('_id')),
+                                    new_rating
+                                )
+                                st.success("Rating saved!")
+                                st.rerun()
         
         
         # --- Display Result (Unified) ---

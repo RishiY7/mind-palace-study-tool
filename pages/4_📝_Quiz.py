@@ -47,50 +47,54 @@ else:
         filename = notebook.get('filename', 'Untitled Notebook')
         st.header(f"📓 {filename}")
         
-        st.markdown("### Generate and Take a Quiz")
+        # Two tabs: Generate New and View Previous
+        tab1, tab2 = st.tabs(["➕ Generate & Take Quiz", "📚 View Previous Quizzes"])
         
-        # Get topics from notebook
-        topics = notebook.get('topics', [])
-        
-        if not topics:
-            st.warning("No topics found in this notebook. Please check your document.")
-        else:
-            col1, col2 = st.columns([2, 1])
+        with tab1:
+            st.markdown("### Generate and Take a Quiz")
             
-            with col1:
-                selected_topic = st.selectbox(
-                    "Choose a topic to quiz on:",
-                    options=topics,
-                    key="quiz_topic"
-                )
+            # Get topics from notebook
+            topics = notebook.get('topics', [])
             
-            with col2:
-                num_questions = st.number_input(
-                    "Number of questions:",
-                    min_value=1,
-                    max_value=10,
-                    value=5
-                )
-            
-            # Check for existing quiz on this topic
-            existing_quizzes = db.get_quizzes(st.session_state.current_notebook, selected_topic)
-            
-            if existing_quizzes:
-                st.info(f"✅ {len(existing_quizzes)} quiz(zes) already exist for '{selected_topic}'")
-                if st.button("📝 Use Existing Quiz", key="use_existing"):
-                    st.session_state.selected_quiz = existing_quizzes[0]
-                    st.session_state.in_quiz = True
-                    st.rerun()
-            
-            if st.button("🎯 Generate New Quiz", type="primary"):
-                with st.spinner(f"Generating {num_questions} questions on '{selected_topic}'..."):
-                    try:
-                        # Get topic-specific text
-                        text_content = notebook.get('text_content', '')
-                        topic_text = get_topic_text(text_content, selected_topic)
-                        
-                        # Build prompt for structured output
-                        prompt = f"""Based on the following text about '{selected_topic}', generate exactly {num_questions} multiple-choice quiz questions.
+            if not topics:
+                st.warning("No topics found in this notebook. Please check your document.")
+            else:
+                col1, col2 = st.columns([2, 1])
+                
+                with col1:
+                    selected_topic = st.selectbox(
+                        "Choose a topic to quiz on:",
+                        options=topics,
+                        key="quiz_topic"
+                    )
+                
+                with col2:
+                    num_questions = st.number_input(
+                        "Number of questions:",
+                        min_value=1,
+                        max_value=10,
+                        value=5
+                    )
+                
+                # Check for existing quiz on this topic
+                existing_quizzes = db.get_quizzes(st.session_state.current_notebook, selected_topic)
+                
+                if existing_quizzes:
+                    st.info(f"✅ {len(existing_quizzes)} quiz(zes) already exist for '{selected_topic}'")
+                    if st.button("📝 Use Existing Quiz", key="use_existing"):
+                        st.session_state.selected_quiz = existing_quizzes[0]
+                        st.session_state.in_quiz = True
+                        st.rerun()
+                
+                if st.button("🎯 Generate New Quiz", type="primary"):
+                    with st.spinner(f"Generating {num_questions} questions on '{selected_topic}'..."):
+                        try:
+                            # Get topic-specific text
+                            text_content = notebook.get('text_content', '')
+                            topic_text = get_topic_text(text_content, selected_topic)
+                            
+                            # Build prompt for structured output
+                            prompt = f"""Based on the following text about '{selected_topic}', generate exactly {num_questions} multiple-choice quiz questions.
 
 Each question should:
 - Test understanding of key concepts
@@ -102,34 +106,34 @@ Text content:
 {topic_text[:8000]}
 
 Generate {num_questions} questions now."""
+                            
+                            # Call Groq with structured output (Pydantic schema)
+                            quiz_data = call_gemini_structured(prompt, QuizData, model_name="openai/gpt-oss-120b")
+                            
+                            # Convert Pydantic model to dict for storage
+                            quiz_dict = quiz_data.model_dump()
+                            
+                            # Limit to requested number (safety check)
+                            quiz_dict['questions'] = quiz_dict['questions'][:num_questions]
+                            
+                            # Save quiz to database
+                            db.save_quiz(
+                                st.session_state.current_notebook,
+                                selected_topic,
+                                quiz_dict
+                            )
+                            
+                            st.session_state.selected_quiz = quiz_dict
+                            st.session_state.current_quiz_id = None  # Will be set from DB
+                            st.session_state.in_quiz = True
+                            st.session_state.quiz_start_time = time.time()
+                            
+                            st.success(f"✅ Quiz generated with {len(quiz_dict['questions'])} questions!")
+                            st.rerun()
                         
-                        # Call Groq with structured output (Pydantic schema)
-                        quiz_data = call_gemini_structured(prompt, QuizData, model_name="openai/gpt-oss-120b")
-                        
-                        # Convert Pydantic model to dict for storage
-                        quiz_dict = quiz_data.model_dump()
-                        
-                        # Limit to requested number (safety check)
-                        quiz_dict['questions'] = quiz_dict['questions'][:num_questions]
-                        
-                        # Save quiz to database
-                        db.save_quiz(
-                            st.session_state.current_notebook,
-                            selected_topic,
-                            quiz_dict
-                        )
-                        
-                        st.session_state.selected_quiz = quiz_dict
-                        st.session_state.current_quiz_id = None  # Will be set from DB
-                        st.session_state.in_quiz = True
-                        st.session_state.quiz_start_time = time.time()
-                        
-                        st.success(f"✅ Quiz generated with {len(quiz_dict['questions'])} questions!")
-                        st.rerun()
-                    
-                    except Exception as e:
-                        st.error(f"❌ Error generating quiz: {str(e)}")
-                        st.exception(e)
+                        except Exception as e:
+                            st.error(f"❌ Error generating quiz: {str(e)}")
+                            st.exception(e)
         
         # Quiz Taking Interface
         if st.session_state.get('in_quiz', False):
@@ -275,6 +279,51 @@ Generate {num_questions} questions now."""
                 st.session_state.user_answers = None
                 st.session_state.current_question_idx = 0
                 st.rerun()
+        
+        with tab2:
+            st.markdown("### 📚 Previously Generated Quizzes")
+            
+            # Get all quizzes for this notebook
+            all_quizzes = db.get_quizzes(st.session_state.current_notebook)
+            
+            if not all_quizzes:
+                st.info("No quizzes generated yet. Go to 'Generate & Take Quiz' tab to create one!")
+            else:
+                # Group by topic
+                topics_with_quizzes = {}
+                for quiz in all_quizzes:
+                    topic = quiz.get('topic', 'Unknown')
+                    if topic not in topics_with_quizzes:
+                        topics_with_quizzes[topic] = []
+                    topics_with_quizzes[topic].append(quiz)
+                
+                # Display quizzes by topic
+                for topic, quizzes in topics_with_quizzes.items():
+                    st.subheader(f"📌 {topic}")
+                    
+                    for i, quiz in enumerate(quizzes):
+                        num_questions = len(quiz.get('questions', []))
+                        num_attempts = len(quiz.get('attempts', []))
+                        created_at = quiz.get('created_at', datetime.now()).strftime("%b %d, %Y")
+                        
+                        with st.expander(f"Quiz #{i+1} - {num_questions} questions (Created: {created_at})"):
+                            st.caption(f"**Attempts:** {num_attempts}")
+                            
+                            # Show questions preview
+                            for j, question in enumerate(quiz.get('questions', [])[:3]):  # Show first 3
+                                st.markdown(f"**Q{j+1}:** {question.get('text', 'No question')}")
+                            
+                            if num_questions > 3:
+                                st.caption(f"... and {num_questions - 3} more questions")
+                            
+                            # Button to retake this quiz
+                            if st.button(f"📝 Take This Quiz", key=f"retake_quiz_{quiz.get('_id')}"):
+                                st.session_state.selected_quiz = quiz
+                                st.session_state.in_quiz = True
+                                st.session_state.quiz_start_time = time.time()
+                                st.rerun()
+                    
+                    st.divider()
     
     else:
         st.error("Notebook not found!")

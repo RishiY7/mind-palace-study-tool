@@ -5,13 +5,19 @@ Uses local ONNX model (./onxx/model_int8.onnx) for fast, efficient inference.
 """
 
 try:
-    from sklearn.metrics.pairwise import cosine_similarity
     import numpy as np
     from .onnx_embedder import embed_texts, embed_query
     EMBEDDINGS_AVAILABLE = True
 except ImportError as e:
     EMBEDDINGS_AVAILABLE = False
     print(f"Warning: Embedding system not initialized: {e}")
+
+
+def cosine_similarity(a, b):
+    """Lightweight cosine similarity without sklearn."""
+    a_norm = a / (np.linalg.norm(a, axis=1, keepdims=True) + 1e-12)
+    b_norm = b / (np.linalg.norm(b, axis=1, keepdims=True) + 1e-12)
+    return np.dot(a_norm, b_norm.T)
 
 class TopicAwareTextExtractor:
     """Extract text relevant to a specific topic using ONNX semantic similarity."""
