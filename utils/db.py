@@ -21,7 +21,7 @@ class Database:
     
     # ============ NOTEBOOK OPERATIONS ============
     
-    def save_notebook(self, filename, pdf_content, text_content, summary, topics):
+    def save_notebook(self, filename, pdf_content, text_content, summary, topics, embeddings=None):
         """Save a new notebook with optimized nested schema."""
         notebook = {
             'filename': filename,
@@ -29,6 +29,7 @@ class Database:
             'text_content': text_content,
             'summary': summary,
             'topics': topics,
+            'embeddings': embeddings,  # Cached sentence embeddings
             'created_at': datetime.now(),
             'updated_at': datetime.now(),
             

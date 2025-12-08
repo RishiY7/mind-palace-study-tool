@@ -109,10 +109,11 @@ def generate_flashcards_ui(notebook, db):
                 try:
                     # Get text relevant to the selected topic
                     text_content = notebook.get('text_content', '')
+                    cached_embeddings = notebook.get('embeddings')
                     
                     # Use semantic extraction to get topic-specific text
                     st.info(f"🔍 Extracting content relevant to '{selected_topic}'...")
-                    topic_specific_text = get_topic_text(text_content, selected_topic)
+                    topic_specific_text = get_topic_text(text_content, selected_topic, cached_embeddings=cached_embeddings)
                     
                     # Load flashcard prompt
                     prompt_config = load_prompt('flashcard_prompt.json')

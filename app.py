@@ -8,6 +8,7 @@ import json
 from utils.db import Database
 from utils.helpers import extract_text_from_pdf, load_prompt, call_gemini
 from utils.sidebar_utils import display_todays_tasks_sidebar
+from utils.text_extraction import split_into_sentences, compute_embeddings
 
 # Page configuration
 st.set_page_config(
@@ -158,13 +159,18 @@ def display_upload_section():
                 # and extract topics as the first 5 headings or sections
                 topics = extract_topics_from_text(text_content)
                 
+                # Compute embeddings for semantic search (cache in database)
+                st.info("🔍 Computing embeddings for semantic search...")
+                embeddings_data = compute_embeddings(text_content)
+                
                 # Save to database
                 notebook_id = db.save_notebook(
                     filename=uploaded_file.name,
                     pdf_content=pdf_base64,
                     text_content=text_content,
                     summary=summary_response,
-                    topics=topics
+                    topics=topics,
+                    embeddings=embeddings_data
                 )
                 
                 st.success(f"✅ Notebook created successfully!")

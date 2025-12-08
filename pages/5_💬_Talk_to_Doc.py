@@ -171,7 +171,8 @@ with col2:
         # Generate First Question
         with st.spinner("Duck is thinking..."):
             # Get semantic context for the topic
-            context = get_topic_text(notebook.get('text_content', ''), selected_topic)
+            cached_embeddings = notebook.get('embeddings')
+            context = get_topic_text(notebook.get('text_content', ''), selected_topic, cached_embeddings=cached_embeddings)
             initial_q = generate_tutor_response([], selected_topic, context)
             
             st.session_state.duck_messages.append({
@@ -235,7 +236,8 @@ else:
         st.session_state.duck_messages.append({"role": "user", "content": user_input})
         
         # Get Context for Grading/Next Question
-        context = get_topic_text(notebook.get('text_content', ''), st.session_state.duck_topic)
+        cached_embeddings = notebook.get('embeddings')
+        context = get_topic_text(notebook.get('text_content', ''), st.session_state.duck_topic, cached_embeddings=cached_embeddings)
         
         # Find the last ACTUAL question (not grading feedback) asked by the Duck
         last_question = "Explain the topic."

@@ -121,8 +121,9 @@ else:
                 if st.button(button_text, type="primary"):
                     with st.spinner(f"🔍 Extracting content for '{selected_topic}'..."):
                         text_content = notebook.get('text_content', '')
-                        # This line likely calls the embedding model
-                        topic_specific_text = get_topic_text(text_content, selected_topic) 
+                        cached_embeddings = notebook.get('embeddings')
+                        # Uses cached embeddings from database
+                        topic_specific_text = get_topic_text(text_content, selected_topic, cached_embeddings=cached_embeddings) 
                     
                     run_generation(topic_specific_text, selected_topic)
             else:

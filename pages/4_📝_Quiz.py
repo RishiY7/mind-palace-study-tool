@@ -91,7 +91,8 @@ else:
                         try:
                             # Get topic-specific text
                             text_content = notebook.get('text_content', '')
-                            topic_text = get_topic_text(text_content, selected_topic)
+                            cached_embeddings = notebook.get('embeddings')
+                            topic_text = get_topic_text(text_content, selected_topic, cached_embeddings=cached_embeddings)
                             
                             # Build prompt for structured output
                             prompt = f"""Based on the following text about '{selected_topic}', generate exactly {num_questions} multiple-choice quiz questions.

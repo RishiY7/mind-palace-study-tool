@@ -101,6 +101,12 @@ class OnnxEmbedder:
         
         embeddings = self.session.run(None, onnx_inputs)[0]
         
+        # Check embedding shape and extract sentence embedding if needed
+        # ONNX models sometimes return (batch, seq_len, hidden_dim) instead of (batch, hidden_dim)
+        if len(embeddings.shape) == 3:
+            # Take the [CLS] token (first token) as the sentence embedding
+            embeddings = embeddings[:, 0, :]
+        
         # L2 normalization
         embeddings = embeddings.astype(np.float32)
         norms = np.linalg.norm(embeddings, axis=1, keepdims=True)

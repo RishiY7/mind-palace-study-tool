@@ -26,7 +26,7 @@ class TopicAwareTextExtractor:
         """Initialize extractor with ONNX embeddings (lazy initialization)."""
         self.embeddings_available = EMBEDDINGS_AVAILABLE
     
-    def extract_topic_text(self, text, topic, max_length=8000):
+    def extract_topic_text(self, text, topic, max_length=8000, cached_embeddings=None):
         """
         Extract text most relevant to a specific topic using ONNX semantic similarity.
         
@@ -34,6 +34,7 @@ class TopicAwareTextExtractor:
             text (str): Full document text
             topic (str): Topic to search for
             max_length (int): Maximum characters to return
+            cached_embeddings (dict): Pre-computed embeddings {'sentences': [...], 'embeddings': [...]}
         
         Returns:
             str: Topic-relevant text excerpt (up to max_length chars)
@@ -47,17 +48,22 @@ class TopicAwareTextExtractor:
             return self._fallback_extraction(text, topic, max_length)
         
         try:
-            # Split text into sentences
-            sentences = self._split_sentences(text)
-            
-            if not sentences:
-                return text[:max_length]
+            # Use cached embeddings if available
+            if cached_embeddings and 'sentences' in cached_embeddings and 'embeddings' in cached_embeddings:
+                sentences = cached_embeddings['sentences']
+                sentence_embeddings = np.array(cached_embeddings['embeddings'], dtype=np.float32)
+            else:
+                # Fall back to computing embeddings on-the-fly
+                sentences = self._split_sentences(text)
+                
+                if not sentences:
+                    return text[:max_length]
+                
+                # Encode all sentences with search_document prefix
+                sentence_embeddings = embed_texts(sentences, prefix="search_document:")
             
             # Encode topic query with search_query prefix
             topic_embedding = embed_query(topic).reshape(1, -1)
-            
-            # Encode all sentences with search_document prefix
-            sentence_embeddings = embed_texts(sentences, prefix="search_document:")
             
             # Calculate similarity between topic and each sentence
             similarities = cosine_similarity(topic_embedding, sentence_embeddings)[0]
@@ -146,7 +152,7 @@ class TopicAwareTextExtractor:
         return result
 
 
-def get_topic_text(text, topic, use_semantic=True):
+def get_topic_text(text, topic, use_semantic=True, cached_embeddings=None):
     """
     Convenience function to extract topic-specific text.
     
@@ -154,13 +160,14 @@ def get_topic_text(text, topic, use_semantic=True):
         text (str): Full document text
         topic (str): Topic to extract
         use_semantic (bool): Use semantic similarity (requires ONNX embeddings)
+        cached_embeddings (dict): Pre-computed embeddings from database
     
     Returns:
         str: Extracted text relevant to the topic
     """
     if use_semantic and EMBEDDINGS_AVAILABLE:
         extractor = TopicAwareTextExtractor()
-        return extractor.extract_topic_text(text, topic)
+        return extractor.extract_topic_text(text, topic, cached_embeddings=cached_embeddings)
     else:
         # Simple fallback
         return _simple_keyword_extraction(text, topic)
@@ -184,3 +191,40 @@ def _simple_keyword_extraction(text, topic, max_length=8000):
         return text[start:end]
     else:
         return text[:max_length]
+
+
+def split_into_sentences(text):
+    """
+    Split text into sentences for embedding caching.
+    Returns list of sentence strings.
+    """
+    extractor = TopicAwareTextExtractor()
+    return extractor._split_sentences(text)
+
+
+def compute_embeddings(text):
+    """
+    Compute and return embeddings for all sentences in text.
+    Returns dict with 'sentences' and 'embeddings' (as list of lists for MongoDB).
+    Returns None if embeddings not available.
+    """
+    if not EMBEDDINGS_AVAILABLE:
+        return None
+    
+    try:
+        # Split into sentences
+        sentences = split_into_sentences(text)
+        if not sentences:
+            return None
+        
+        # Compute embeddings
+        embeddings = embed_texts(sentences, prefix="search_document:")
+        
+        # Convert to list of lists for MongoDB storage
+        return {
+            'sentences': sentences,
+            'embeddings': embeddings.tolist()  # Convert numpy array to list
+        }
+    except Exception as e:
+        print(f"Error computing embeddings: {e}")
+        return None

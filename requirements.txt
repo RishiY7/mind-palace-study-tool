@@ -4,7 +4,8 @@ groq
 pydantic
 pypdf2
 python-dotenv
-nltk
+numpy
 onnxruntime
 numpy
 transformers
+speech_recognition
