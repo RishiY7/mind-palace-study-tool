@@ -1,90 +1,44 @@
 # 🧠 Mind Palace - Quick Reference Guide
 
-## 🚀 Launch Application
+## 🚀 Launch
 ```powershell
-streamlit run app.py
+streamlit run app.py   # or run start.ps1 for quick checks
 ```
 
 ## 📋 Project Overview
+Mind Palace converts PDFs into interactive study notebooks with AI summaries, topic-aware flashcards/quizzes, mnemonics, study plans, and a Socratic tutor.
 
-**Mind Palace** is an AI-powered learning platform that transforms PDFs into interactive study notebooks.
+### Key Features
+- ✅ 8 fully functional pages (summary, viewer, flashcards, quiz, talk to doc, scheduler, progress, mnemonics)
+- ✅ AI generation via Groq (`openai/gpt-oss-120b` by default)
+- ✅ Local ONNX topic-aware extraction (nomic-embed-text-v1.5 int8)
+- ✅ MongoDB persistence (single `notebooks` collection with embedded progress/flashcards/quizzes/acronyms)
+- ✅ Gamified learning (points + achievements)
 
-### Key Features:
-- ✅ **8 Functional Pages** (2 placeholders for future development)
-- ✅ **AI-Powered Content Generation** using Google Gemini
-- ✅ **MongoDB Data Persistence**
-- ✅ **Gamified Learning** with points and achievements
-- ✅ **Modular Prompt System** (JSON-based)
-
-## 📂 File Structure
-
+## 📂 File Structure (high level)
 ```
-├── app.py                      # Main entry point (home page)
-├── pages/                      # Streamlit multi-page app
-│   ├── 1_📄_Summary.py        # ✅ AI summary & topics
-│   ├── 2_📖_PDF_Viewer.py     # ✅ View original PDF
-│   ├── 3_🎴_Flashcards.py     # ✅ Generate flashcards
-│   ├── 4_📝_Quiz.py           # 🚧 Placeholder
-│   ├── 5_💬_Talk_to_Doc.py    # 🚧 Placeholder
-│   ├── 6_📅_Study_Scheduler.py # ✅ Create study plans
-│   ├── 7_🎯_Progress_Tracker.py # ✅ Track progress
-│   └── 8_🧠_Acronym_Generator.py # ✅ Memory mnemonics
-├── prompts/                    # AI prompt configurations
-│   ├── summary_prompt.json
-│   ├── flashcard_prompt.json
-│   ├── acronym_prompt.json
-│   ├── scheduler_prompt.json
-│   └── quiz_prompt.json
-└── utils/                      # Helper modules
-    ├── db.py                   # MongoDB operations
-    └── helpers.py              # PDF & AI utilities
+app.py
+pages/1_📄_Summary.py ... 8_🧠_Acronym_Generator.py
+utils/db.py, helpers.py, text_extraction.py, onnx_embedder.py, sidebar_utils.py
+prompts/*.json (summary, topics, flashcards, scheduler, quiz, mnemonics)
+onnx/model_int8.onnx
 ```
 
 ## 🎯 Usage Workflow
+1️⃣ Upload PDF → summary + topics generated (full text)  
+2️⃣ Explore via sidebar:
+- **Summary:** summary, topics, stats
+- **PDF Viewer:** inline view + download
+- **Flashcards:** topic-aware generation + study/list modes
+- **Quiz:** structured MCQs per topic with scoring
+- **Study Scheduler:** day-by-day tasks, mark complete
+- **Progress Tracker:** points, achievements, completion %
+- **Memory Aid Generator:** acronym/song/phrase/story/all
+- **Talk to Doc:** Socratic tutor using topic-focused context
 
-### 1️⃣ Upload PDF
-- Go to home page
-- Click "Choose a PDF file"
-- Wait for AI processing
+3️⃣ Complete tasks & quizzes → points update in Progress Tracker and sidebar “today’s tasks”.
 
-### 2️⃣ Explore Your Notebook
-Navigate using the sidebar:
-
-**📄 Summary**
-- View AI-generated summary
-- See extracted key topics
-
-**📖 PDF Viewer**
-- Read original document
-- Download PDF
-
-**🎴 Flashcards**
-- Select a topic
-- Generate Q&A flashcards
-
-**📅 Study Scheduler**
-- Set target days (1-365)
-- Get personalized daily tasks
-- Each task has points (10-20)
-
-**🎯 Progress Tracker**
-- View total score
-- Track completed tasks
-- Unlock achievements
-- See completion percentage
-
-**🧠 Acronym Generator**
-- Choose topic or enter custom text
-- Generate memory mnemonics
-- Get memory tips
-
-### 3️⃣ Complete Tasks & Earn Points
-- Go to Study Scheduler
-- Click ✓ to mark tasks complete
-- Watch your score grow in Progress Tracker!
-
-## 🏆 Achievement System
-
+## 🏆 Achievement Milestones
 | Achievement | Requirement | Icon |
 |------------|-------------|------|
 | Getting Started | 50 points | 🌱 |
@@ -96,84 +50,26 @@ Navigate using the sidebar:
 | Perfect Score | 100% complete | 💯 |
 
 ## 🔧 Customization
-
-### Edit AI Prompts
-Modify JSON files in `prompts/` directory:
-
-```json
-{
-    "name": "Prompt Name",
-    "description": "What it does",
-    "system_instruction": "AI role/behavior",
-    "user_instruction": "Task instructions"
-}
-```
-
-### Database Collections
-MongoDB stores data in two collections:
-- `notebooks` - PDF content, summaries, topics, schedules
-- `progress` - Completed tasks, scores
+- **Prompts:** edit JSON under `prompts/` (supports `{topic}`, `{text}`, `{target_text}` placeholders).
+- **Models:** override via `.env` (`GROQ_MODELS`, `GROQ_MODEL`); replace `onnx/model_int8.onnx` if you want a different embedding variant.
 
 ## 🐛 Common Issues
-
-**MongoDB Connection Error**
-- Ensure MongoDB is running in WSL
-- Check MONGODB_URI in .env
-
-**API Key Error**
-- Verify GEMINI_API_KEY in .env
-- Check API key permissions
-
-**PDF Not Loading**
-- Ensure PDF is not password-protected
-- Check PDF has extractable text
-
-## 📊 MongoDB Queries (Optional)
-
-```javascript
-// View all notebooks
-db.notebooks.find()
-
-// Check progress
-db.progress.find()
-
-// Delete all data (reset)
-db.notebooks.deleteMany({})
-db.progress.deleteMany({})
-```
-
-## 🚀 Development Tips
-
-### Run Verification
-```powershell
-.\verify_setup.ps1
-```
-
-### View Logs
-Streamlit shows logs in terminal where it's running
-
-### Clear Cache
-```powershell
-streamlit cache clear
-```
-
-### Force Reload
-Press `R` in browser or `Ctrl+R`
+- **MongoDB:** ensure `mongod` is running; check `MONGODB_URI`.
+- **Groq key:** set `GROQ_API_KEY`; choose model if needed.
+- **Embeddings:** keep `onnx/model_int8.onnx` present; install `onnxruntime`, `transformers`, `numpy`.
+- **PDF text:** scanned/encrypted PDFs may not extract text—use selectable-text PDFs.
 
 ## 📝 Notes
-
-- **Placeholders**: Quiz and Talk to Doc pages are scaffolded for future development
-- **Text Limit**: AI processes first 8,000-10,000 characters for performance
-- **Topics**: Auto-extracted from document structure
-- **Session State**: Some data stored in browser session (flashcards, acronyms)
+- Summary uses full document text; topics use AI+heuristic; scheduler uses the first ~8k chars for speed.
+- Flashcards/quiz/tutor use topic-aware text slices via ONNX embeddings.
+- Session state keeps flashcards/quiz/tutor context in-browser.
 
 ## 🎓 Best Practices
-
-1. **Upload clear, well-structured PDFs** for best results
-2. **Create schedule early** to maximize gamification features
-3. **Review summary first** before diving into specific topics
-4. **Use acronyms** for lists and key concepts
-5. **Track progress daily** to stay motivated
+1. Upload well-structured PDFs for best extraction.  
+2. Generate schedule early so points/achievements track instantly.  
+3. Use topic-aware flashcards/quiz before Talk to Doc for focused practice.  
+4. Regenerate mnemonics if a style doesn’t fit—song/phrase/story options exist.  
+5. Clear Streamlit cache if prompts/models change (`streamlit cache clear`).  
 
 ---
 

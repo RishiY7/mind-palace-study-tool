@@ -388,7 +388,12 @@ def view_previous_flashcards(notebook, db):
                 st.rerun()
         
         with col4:
-            mastery_level = card.get('mastery_level', 0)
+            # Handle mastery_level - convert to int, default to 0 if not a valid number
+            try:
+                mastery_level = int(card.get('mastery_level', 0))
+            except (ValueError, TypeError):
+                mastery_level = 0
+            
             if st.button(f"{'⭐' * mastery_level} Mark Mastered"):
                 db.update_flashcard_review(
                     st.session_state.current_notebook,
@@ -408,7 +413,11 @@ def view_previous_flashcards(notebook, db):
                 
                 col1, col2 = st.columns([3, 1])
                 with col1:
-                    mastery = card.get('mastery_level', 0)
+                    # Handle mastery_level - convert to int, default to 0 if not a valid number
+                    try:
+                        mastery = int(card.get('mastery_level', 0))
+                    except (ValueError, TypeError):
+                        mastery = 0
                     st.caption(f"Mastery: {'⭐' * mastery if mastery > 0 else '☆☆☆☆☆'}")
                 with col2:
                     review_count = card.get('review_count', 0)

@@ -1,145 +1,34 @@
-# ✅ Changes Made
+# ✅ Changes Made (Current State)
 
-## 1️⃣ Changed "app" to "🏠 Home"
+## 1) Groq-Powered AI Pipeline
+- Swapped Gemini references for Groq (`groq` client, default model `openai/gpt-oss-120b`).
+- `call_gemini`/`call_gemini_structured` now route to Groq for summaries, flashcards, scheduler, quiz, mnemonics, and tutor.
 
-### What Changed:
-- Page title now shows "Mind Palace - Home"
-- Sidebar header shows "🏠 Home" when on home page
-- Sidebar header shows "📚 My Notebooks" when a notebook is selected
-- Main header is more contextual (shows "Your AI-Powered Learning Companion" on home, notebook info when selected)
-- Button changed from "➕ New Notebook" to "🏠 Home" for better navigation
+## 2) Topic-Aware Extraction via Local ONNX
+- `utils/text_extraction.py` + `utils/onnx_embedder.py` use `onnx/model_int8.onnx` (nomic-embed-text-v1.5) to pull topic-relevant slices.
+- Fallback keyword extraction keeps pages working if embeddings are missing.
+- Used by flashcards, quiz, mnemonics, and Talk to Doc.
 
-### Where:
-- **File:** `app.py`
-- **Lines:** Page configuration and main UI
+## 3) Full-Text Summaries & Faster Subfeatures
+- Upload flow now summarizes the **entire** document text (no 10k-char cap).
+- Topics still use AI on the first ~8k chars with heuristic backup for resilience.
+- Scheduler uses ~8k chars for speed; other generators rely on topic slices.
 
----
+## 4) Rich Learning Pages
+- **Quiz page**: Structured MCQs via Pydantic schema + Groq JSON schema response, scoring, attempts, and progress updates.
+- **Talk to Doc**: Socratic tutor with topic-focused context, grading, and optional speech input.
+- **Memory Aid Generator**: Acronym, song, phrase, story, or “all mnemonics” in one go.
+- **Flashcards**: Study mode + list view; stored per topic with mastery counters.
 
-## 2️⃣ Topic Extraction Alternatives
+## 5) Data Model Consolidation
+- Single `notebooks` collection embeds schedule, flashcards, quizzes, acronyms, and progress (completed tasks, total score, streaks, mastery, quiz average).
+- Sidebar shows “today’s tasks” and a home button; notebooks can be deleted from the sidebar.
 
-### What You Now Have:
-A comprehensive guide with **5 alternative methods** for extracting topics from PDFs:
-
-| # | Method | Speed | Accuracy | Cost | Best For |
-|---|--------|-------|----------|------|----------|
-| 1 | **AI (Gemini)** ⭐ RECOMMENDED | ⚡⚡ | ⭐⭐⭐⭐⭐ | $$ | Any document, best quality |
-| 2 | **spaCy NER** | ⚡⚡ | ⭐⭐⭐ | Free | Named entities & phrases |
-| 3 | **RAKE** | ⚡⚡⚡ | ⭐⭐⭐ | Free | Quick keyword extraction |
-| 4 | **TextRank** | ⚡⚡ | ⭐⭐⭐⭐ | Free | Balanced approach |
-| 5 | **PDF Structure** | ⚡⚡⚡ | ⭐⭐⭐⭐⭐ | Free | Structured PDFs only |
-
-**Reference Document:** `TOPIC_EXTRACTION_ALTERNATIVES.md`
+## 6) Prompts & Assets
+- Prompts expanded beyond core features: `summary`, `topics`, `flashcard`, `scheduler`, `quiz`, `acronym`, `song`, `phrase`, `story`, `all_mnemonics`.
+- Local ONNX model expected at `onnx/model_int8.onnx`; requirements include `onnxruntime`, `transformers`, `numpy`.
 
 ---
 
-## 3️⃣ Current Implementation: Hybrid AI + Heuristic
-
-### What's Implemented Now:
-The app now uses a **two-tier approach**:
-
-1. **Primary (AI-Based):** Tries to use Gemini API to intelligently extract topics
-   - More accurate across all document types
-   - Understands context and importance
-   - Uses new `topics_prompt.json`
-
-2. **Fallback (Heuristic):** Falls back to line-filtering if AI fails
-   - Looks for lines that might be headings
-   - Always works, even if API is down
-
-### Code Flow:
-```python
-extract_topics_from_text(text)
-    ↓
-    Try: AI-based extraction
-    ├─ Load topics_prompt.json
-    ├─ Send to Gemini API
-    └─ Parse JSON response
-    ↓
-    If success: Return AI topics ✅
-    ↓
-    If failed: Use heuristic fallback
-    ├─ Filter short lines
-    ├─ Check for heading patterns
-    └─ Return heuristic topics ✅
-```
-
----
-
-## 📋 New Files Created
-
-### `TOPIC_EXTRACTION_ALTERNATIVES.md`
-Comprehensive guide comparing all topic extraction methods with:
-- Implementation code for each method
-- Installation instructions
-- Pros/cons analysis
-- Recommendation (AI-based for Mind Palace)
-
-### `prompts/topics_prompt.json`
-New prompt configuration for AI-based topic extraction:
-```json
-{
-    "name": "Topic Extraction",
-    "description": "Intelligently extracts the 10 most important topics/concepts",
-    "system_instruction": "You are an expert document analyst...",
-    "user_instruction": "Extract 10 most important topics, return as JSON array..."
-}
-```
-
----
-
-## 🚀 How It Works Now
-
-### When User Uploads PDF:
-
-```
-1. Extract text from PDF (PyPDF2)
-   ↓
-2. Extract topics intelligently:
-   a) Try Gemini API → Get AI-extracted topics
-   b) If fails → Use heuristic backup
-   ↓
-3. Generate AI summary (existing feature)
-   ↓
-4. Save to MongoDB
-   ├─ filename
-   ├─ pdf_content (Base64)
-   ├─ text_content
-   ├─ summary (AI)
-   └─ topics (AI with heuristic fallback)
-```
-
----
-
-## 💡 Benefits
-
-✅ **More Accurate Topics** - AI understands context, not just text patterns
-✅ **Reliable** - Heuristic fallback ensures it always works
-✅ **Flexible** - Easy to switch to different methods (see alternatives doc)
-✅ **Consistent** - Uses same Gemini API as other features
-✅ **Better UX** - Better topics = better flashcards and study materials
-
----
-
-## 🔧 To Use a Different Method
-
-If you want to switch to spaCy, RAKE, TextRank, or PDF Structure extraction:
-
-1. Open `TOPIC_EXTRACTION_ALTERNATIVES.md`
-2. Copy the code for your preferred method
-3. Replace the `extract_topics_from_text()` function in `app.py`
-4. Install any required packages
-
----
-
-## ✨ Summary
-
-| Change | Details |
-|--------|---------|
-| **Navigation** | Changed "app" to "🏠 Home" for better UX |
-| **Topic Extraction** | Added AI-based method (Gemini) with heuristic fallback |
-| **Documentation** | Created alternatives guide for future improvements |
-| **New Prompt** | Added `topics_prompt.json` for AI topic extraction |
-| **Code Quality** | Improved error handling and resilience |
-
-All changes are backward compatible. The app will continue to work and is now smarter! 🧠
+These updates make the app fully functional across all eight pages with Groq-backed generation and local semantic extraction. 🧠🚀
 

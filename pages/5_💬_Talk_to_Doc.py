@@ -143,6 +143,8 @@ if 'duck_topic' not in st.session_state:
     st.session_state.duck_topic = None
 if 'duck_score_history' not in st.session_state:
     st.session_state.duck_score_history = []
+if 'last_processed_input' not in st.session_state:
+    st.session_state.last_processed_input = None
 
 # --- Topic Selection ---
 topics = notebook.get('topics', [])
@@ -164,6 +166,7 @@ with col2:
         st.session_state.duck_topic = selected_topic
         st.session_state.duck_messages = []
         st.session_state.duck_score_history = []
+        st.session_state.last_processed_input = None  # Reset input tracking
         
         # Generate First Question
         with st.spinner("Duck is thinking..."):
@@ -214,15 +217,20 @@ else:
             st.error("❌ `SpeechRecognition` library is not installed. Please add it to requirements.txt")
         else:
             with st.spinner("🎧 Transcribing..."):
-                user_input = transcribe_audio(audio_val)
-                if not user_input:
+                transcribed = transcribe_audio(audio_val)
+                if transcribed:
+                    user_input = transcribed
+                else:
                     st.warning("Could not understand audio.")
     
     if text_val:
         user_input = text_val
 
-    # Process Submission
-    if user_input:
+    # Process Submission - only if it's new input
+    if user_input and user_input != st.session_state.last_processed_input:
+        # Mark this input as processed
+        st.session_state.last_processed_input = user_input
+        
         # Append User Message
         st.session_state.duck_messages.append({"role": "user", "content": user_input})
         

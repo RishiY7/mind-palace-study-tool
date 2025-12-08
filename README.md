@@ -1,206 +1,97 @@
 # 🧠 Mind Palace - AI-Powered Learning Platform
 
-An interactive, multi-page Streamlit application that transforms your PDF documents into comprehensive learning notebooks using AI-powered features.
+An interactive Streamlit app that turns PDFs into full learning notebooks with AI summaries, topic-aware flashcards, quizzes, study plans, mnemonics, progress tracking, and a Socratic tutor.
 
 ## 🌟 Features
-
-### Core Functionality
-- **📤 PDF Upload & Processing** - Automatically extract text and generate structured notebooks
-- **🤖 AI-Powered Analysis** - Uses Google Gemini API for intelligent content processing
-- **💾 MongoDB Integration** - Persistent storage for notebooks and progress tracking
-
-### Learning Tools
-
-1. **📄 Summary Page**
-   - AI-generated concise summaries
-   - Automatic extraction of key topics and sections
-   - Document statistics and analytics
-
-2. **📖 PDF Viewer**
-   - View your original PDF within the app
-   - Download option for offline access
-
-3. **🎴 Flashcard Generator**
-   - Topic-based flashcard generation
-   - Question/answer format for effective learning
-   - AI-powered content extraction
-
-4. **📝 Interactive Quiz** (Placeholder)
-   - Coming soon: Multiple-choice quizzes
-   - Instant feedback and scoring
-
-5. **💬 Talk to Doc** (Placeholder)
-   - Coming soon: RAG-powered chatbot
-   - Ask questions about your document
-   - Context-aware responses
-
-6. **📅 Study Scheduler**
-   - Personalized study plans based on target dates
-   - Breaks content into 4-5 manageable daily tasks
-   - Flexible scheduling (1-365 days)
-
-7. **🎯 Progress Tracker**
-   - Gamification with point system
-   - Track completed tasks
-   - Achievement badges
-   - Visual progress bars and statistics
-
-8. **🧠 Acronym Generator**
-   - Create mnemonic devices for key concepts
-   - Topic-based or custom text input
-   - Memory tips and best practices
+- **PDF → Notebook pipeline:** upload once, store PDF/text/summary/topics in MongoDB
+- **AI Summary:** Groq-hosted `openai/gpt-oss-120b` (default) over full document text
+- **Topic Extraction:** AI prompt + heuristic fallback; topic-aware text slicing via local ONNX embeddings
+- **Learning tools:** flashcards, quizzes (structured output), study scheduler, progress tracker, memory aids (acronym/song/phrase/story)
+- **RAG-style chat:** Socratic “Talk to Doc” with topic-focused context
+- **Gamification:** task points, achievements, and sidebar “today’s tasks”
 
 ## 🚀 Getting Started
 
 ### Prerequisites
+- Python 3.10+
+- MongoDB running locally (`mongodb://127.0.0.1:27017/mind_palace` by default)
+- Groq API key (for `groq` client); optional custom model name
+- ONNX embedding file at `onnx/model_int8.onnx` (nomic-embed-text-v1.5, int8)
 
-- Python 3.8 or higher
-- MongoDB installed and running locally
-- Google Gemini API key
+### Installation & Run
+```powershell
+cd "c:\Users\vishn\PROJECT\STEP BY STEP DEC 7"
+pip install -r requirements.txt
+```
 
-### Installation
+Create `.env`:
+```
+GROQ_API_KEY=your_api_key
+GROQ_MODELS=openai/gpt-oss-120b    # optional, defaults to this
+GROQ_MODEL=openai/gpt-oss-120b     # used on Talk to Doc page
+MONGODB_URI=mongodb://127.0.0.1:27017/mind_palace
+```
 
-1. **Clone or navigate to the project directory:**
-   ```powershell
-   cd "c:\Users\vishn\PROJECT\STEP BY STEP DEC 7"
-   ```
-
-2. **Install dependencies:**
-   ```powershell
-   pip install -r requirements.txt
-   ```
-
-3. **Configure environment variables:**
-   
-   The `.env` file should contain:
-   ```
-   GEMINI_API_KEY=your_api_key_here
-   GEMINI_MODEL=gemini-flash-lite-latest
-   MONGODB_URI=mongodb://127.0.0.1:27017/mind_palace
-   ```
-
-4. **Start MongoDB:**
-   ```powershell
-   # Make sure MongoDB is running on localhost:27017
-   ```
-
-5. **Run the application:**
-   ```powershell
-   streamlit run app.py
-   ```
-
-6. **Open your browser:**
-   - The app will automatically open at `http://localhost:8501`
+Run:
+```powershell
+streamlit run app.py
+# or use start.ps1 to verify Mongo/.env first
+```
+Open `http://localhost:8501`.
 
 ## 📁 Project Structure
-
 ```
 STEP BY STEP DEC 7/
-├── app.py                          # Main application entry point
-├── requirements.txt                # Python dependencies
-├── .env                           # Environment configuration
+├── app.py                      # Home: upload, notebook list, sidebar tasks
+├── pages/
+│   ├── 1_📄_Summary.py         # Summary + topics + stats
+│   ├── 2_📖_PDF_Viewer.py      # Inline viewer + download
+│   ├── 3_🎴_Flashcards.py      # Topic-aware generation + review
+│   ├── 4_📝_Quiz.py            # Structured MCQ quizzes + scoring
+│   ├── 5_💬_Talk_to_Doc.py     # Socratic tutor with topic context
+│   ├── 6_📅_Study_Scheduler.py # Day-by-day plan + task completion
+│   ├── 7_🎯_Progress_Tracker.py# Points, achievements, completion %
+│   └── 8_🧠_Acronym_Generator.py# Mnemonics (acronym/song/phrase/story/all)
 ├── utils/
-│   ├── __init__.py
-│   ├── db.py                      # MongoDB database operations
-│   └── helpers.py                 # PDF processing and AI helpers
-├── prompts/
-│   ├── summary_prompt.json        # Summary generation prompt
-│   ├── flashcard_prompt.json     # Flashcard generation prompt
-│   ├── scheduler_prompt.json     # Study scheduler prompt
-│   └── acronym_prompt.json       # Acronym generation prompt
-└── pages/
-    ├── 1_📄_Summary.py
-    ├── 2_📖_PDF_Viewer.py
-    ├── 3_🎴_Flashcards.py
-    ├── 4_📝_Quiz.py
-    ├── 5_💬_Talk_to_Doc.py
-    ├── 6_📅_Study_Scheduler.py
-    ├── 7_🎯_Progress_Tracker.py
-    └── 8_🧠_Acronym_Generator.py
+│   ├── db.py                   # Mongo CRUD, embedded flashcards/quizzes/acronyms/progress
+│   ├── helpers.py              # Groq client, PDF text extraction, prompt loader
+│   ├── text_extraction.py      # Topic-aware extraction via ONNX + fallback
+│   ├── onnx_embedder.py        # Nomic embed ONNX wrapper
+│   └── sidebar_utils.py        # Shared sidebar renderer
+├── prompts/                    # JSON prompt configs (summary, topics, flashcards, scheduler, quiz, mnemonics)
+├── onnx/model_int8.onnx        # Local embedding model (int8)
+├── requirements.txt
+└── start.ps1                   # Optional quick-start check + run
 ```
 
-## 🎯 Usage Guide
-
-### Creating a Notebook
-
-1. **Upload a PDF** - Click "Choose a PDF file" on the home page
-2. **Wait for processing** - The AI will generate a summary and extract topics
-3. **Navigate pages** - Use the sidebar to access different features
-
-### Study Workflow
-
-1. **📄 Review Summary** - Start with the AI-generated overview
-2. **📅 Create Schedule** - Set your target completion date
-3. **🎴 Generate Flashcards** - Create study materials for each topic
-4. **🧠 Make Mnemonics** - Use acronyms to remember key concepts
-5. **🎯 Track Progress** - Mark tasks complete and earn points
+## 🎯 Usage Workflow
+1. Upload a PDF → notebook is created with full-text summary + topics.
+2. Review **Summary**, then **PDF Viewer** for the source.
+3. Generate **Flashcards** or **Quiz** per topic (uses topic-aware text extraction).
+4. Build a **Study Schedule** and mark tasks done; **Progress Tracker** updates points/achievements.
+5. Use **Memory Aid Generator** for acronyms/songs/phrases/stories or **Talk to Doc** for Socratic Q&A.
 
 ## 🔧 Technical Stack
-
-- **Frontend:** Streamlit
-- **AI/LLM:** Google Gemini API (gemini-flash-lite-latest)
-- **Database:** MongoDB
-- **PDF Processing:** PyPDF2
-- **Environment Management:** python-dotenv
+- **Frontend:** Streamlit multipage
+- **LLM:** Groq (`groq` client, default `openai/gpt-oss-120b`)
+- **Embeddings:** Local ONNX `nomic-embed-text-v1.5` (int8) for topic-aware slicing
+- **Database:** MongoDB (single `notebooks` collection with embedded progress/flashcards/quizzes/acronyms)
+- **PDF/Text:** PyPDF2 extraction; Base64 PDF storage
+- **Infra:** python-dotenv, pydantic for structured quiz responses
 
 ## 📝 Prompt Management
+Prompts live in `prompts/*.json` with `system_instruction` + `user_instruction`. `helpers.call_gemini` formats placeholders (`{topic}`, `{text}`, `{target_text}`, etc.) and sends context text plus prompt to Groq.
 
-All AI prompts are stored as JSON files in the `prompts/` directory. Each prompt file contains:
-
-- `name` - Descriptive name of the prompt
-- `description` - What the prompt does
-- `system_instruction` - System-level instructions for the AI
-- `user_instruction` - User-facing prompt template
-
-This design allows for easy customization and version control of AI prompts.
-
-## 🎮 Gamification System
-
-- **Points per task:** 10-20 points (defined in schedule)
-- **Achievements:**
-  - 🌱 Getting Started (50 points)
-  - 🔥 On a Roll (100 points)
-  - ⭐ Dedicated Learner (250 points)
-  - 🎓 Master Student (500 points)
-  - ✅ Task Master (10 tasks completed)
-  - 🎯 Halfway There (50% completion)
-  - 💯 Perfect Score (100% completion)
-
-## 🔮 Future Enhancements
-
-- [ ] Interactive quiz generation with multiple-choice questions
-- [ ] RAG-powered chatbot for document Q&A
-- [ ] Multi-document support
-- [ ] Export study materials (PDF, Anki cards)
-- [ ] Collaborative learning features
-- [ ] Mobile app version
-- [ ] Advanced analytics and insights
+## 🎮 Gamification
+- Points: schedule tasks (10–20 pts each) + quiz scores added to total.
+- Achievements: 🌱50, 🔥100, ⭐250, 🎓500 points; ✅10 tasks; 🎯50% completion; 💯100% completion.
+- Sidebar shows “today’s tasks” when a notebook is selected.
 
 ## 🐛 Troubleshooting
-
-### MongoDB Connection Issues
-```powershell
-# Verify MongoDB is running
-Get-Process mongod
-```
-
-### API Key Errors
-- Check that your `.env` file contains the correct `GEMINI_API_KEY`
-- Ensure the API key has proper permissions
-
-### PDF Processing Errors
-- Ensure the PDF is not password-protected
-- Check that the PDF contains extractable text (not scanned images)
-
-## 📄 License
-
-This project is for educational purposes.
-
-## 🙏 Acknowledgments
-
-- Google Gemini API for AI capabilities
-- Streamlit for the amazing web framework
-- MongoDB for data persistence
+- **MongoDB:** ensure `mongod` is running; check `MONGODB_URI`.
+- **Groq auth:** verify `GROQ_API_KEY`; adjust model via `GROQ_MODELS`/`GROQ_MODEL`.
+- **Embeddings:** confirm `onnx/model_int8.onnx` exists; install `onnxruntime`, `transformers`, `numpy`.
+- **PDF text:** encrypted/scanned PDFs may extract empty text; provide selectable text PDFs.
 
 ---
 

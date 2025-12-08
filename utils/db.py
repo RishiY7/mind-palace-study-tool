@@ -101,7 +101,7 @@ class Database:
                 'answer': card.get('answer', ''),
                 'difficulty': card.get('difficulty', 'medium'),
                 'review_count': 0,
-                'mastery_level': 'learning',  # learning, familiar, mastered
+                'mastery_level': 0,  # 0=new, 1=learning, 2=familiar, 3=mastered, 4-5=expert
                 'last_reviewed': None,
                 'created_at': datetime.now()
             }
