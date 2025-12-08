@@ -1,17 +1,21 @@
 """
 Helper utilities for Mind Palace application.
-Uses Groq Cloud API with OpenAI models.
+Uses Groq Cloud API with OpenAI models, fallback to Gemini for large content.
 """
 import json
 import os
 from PyPDF2 import PdfReader
 from groq import Groq
+from google import genai
 from dotenv import load_dotenv
 
 load_dotenv()
 
 # Groq client for LLM API calls
 client = Groq(api_key=os.getenv('GROQ_API_KEY'))
+
+# Gemini client for large content fallback
+gemini_client = genai.Client(api_key=os.getenv('GEMINI_API_KEY'))
 
 def load_prompt(prompt_file):
     """Load a prompt configuration from JSON file."""
@@ -73,15 +77,27 @@ def call_gemini(prompt_config, context_text="", target_text="", **kwargs):
         "content": full_prompt
     })
     
-    # Call Groq API
-    chat_completion = client.chat.completions.create(
-        messages=messages,
-        model=model_name,
-        temperature=0.7,
-        max_tokens=4096
-    )
+    # Estimate token count (rough estimate: 4 chars per token)
+    total_text = system_instruction + full_prompt if system_instruction else full_prompt
+    estimated_tokens = len(total_text) // 4
     
-    return chat_completion.choices[0].message.content
+    # Use Gemini for large content, Groq for smaller content
+    if estimated_tokens > 7500:
+        # Use Gemini API for large content
+        response = gemini_client.models.generate_content(
+            model=os.getenv('GEMINI_MODEL', 'gemini-2.0-flash-exp'),
+            contents=full_prompt
+        )
+        return response.text
+    else:
+        # Use Groq API for smaller content
+        chat_completion = client.chat.completions.create(
+            messages=messages,
+            model=model_name,
+            temperature=0.7,
+            max_tokens=4096
+        )
+        return chat_completion.choices[0].message.content
 
 def parse_json_response(response_text):
     """

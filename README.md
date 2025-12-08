@@ -28,7 +28,7 @@ Create `.env`:
 ```
 GROQ_API_KEY=your_api_key
 GROQ_MODELS=openai/gpt-oss-120b    # optional, defaults to this
-GROQ_MODEL=openai/gpt-oss-120b     # used on Talk to Doc page
+GROQ_MODEL=openai/gpt-oss-120b     # used on Talk to Duck page
 MONGODB_URI=mongodb://127.0.0.1:27017/mind_palace
 ```
 
@@ -48,7 +48,7 @@ STEP BY STEP DEC 7/
 │   ├── 2_📖_PDF_Viewer.py      # Inline viewer + download
 │   ├── 3_🎴_Flashcards.py      # Topic-aware generation + review
 │   ├── 4_📝_Quiz.py            # Structured MCQ quizzes + scoring
-│   ├── 5_💬_Talk_to_Doc.py     # Socratic tutor with topic context
+│   ├── 5_💬_Talk_to_Duck.py     # Socratic tutor with topic context
 │   ├── 6_📅_Study_Scheduler.py # Day-by-day plan + task completion
 │   ├── 7_🎯_Progress_Tracker.py# Points, achievements, completion %
 │   └── 8_🧠_Acronym_Generator.py# Mnemonics (acronym/song/phrase/story/all)
