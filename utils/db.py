@@ -72,11 +72,14 @@ class Database:
     
     # ============ SCHEDULE OPERATIONS ============
     
-    def save_schedule(self, notebook_id, schedule, days):
+    def save_schedule(self, notebook_id, schedule, days, hours_per_day=2.0):
         """Save study schedule to notebook."""
+        from datetime import datetime
         return self.update_notebook(notebook_id, {
             'schedule': schedule,
-            'schedule_days': days
+            'schedule_days': days,
+            'hours_per_day': hours_per_day,
+            'schedule_start_date': datetime.now().isoformat()  # Track when schedule started
         })
     
     def get_schedule(self, notebook_id):

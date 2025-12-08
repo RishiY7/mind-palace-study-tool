@@ -5,6 +5,7 @@ Provides common sidebar elements like Today's Tasks.
 
 import streamlit as st
 from utils.db import Database
+from datetime import datetime
 
 db = Database()
 
@@ -27,8 +28,21 @@ def display_todays_tasks_sidebar():
     
     st.markdown("### 📋 Today's Tasks")
     
-    # Get today's day (use day 1 as default or first day in schedule)
-    current_day = st.session_state.get('current_study_day', 1)
+    # Calculate the current day based on start_date
+    start_date = notebook.get('schedule_start_date')
+    
+    if start_date:
+        # Parse the date if it's a string
+        if isinstance(start_date, str):
+            start_date = datetime.fromisoformat(start_date)
+        
+        # Calculate days elapsed
+        today = datetime.now()
+        days_elapsed = (today.date() - start_date.date()).days
+        current_day = days_elapsed + 1  # Day 1 is the first day
+    else:
+        # Fallback to session state if no start date
+        current_day = st.session_state.get('current_study_day', 1)
     
     # Find today's schedule
     todays_schedule = None

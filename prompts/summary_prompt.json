@@ -1,6 +1,6 @@
 {
-    "name": "PDF Summary Generator",
-    "description": "Generates a concise summary and extracts key topics from an uploaded PDF.",
-    "system_instruction": "You are an expert educational assistant specializing in creating structured learning materials. Your task is to process the following text and create a two-part output.",
-    "user_instruction": "Based on the provided text from the PDF, first generate a concise, high-level summary (3-4 paragraphs). Second, extract and list the 5 most important topics or sections from the document for effective learning. Format the output clearly using Markdown."
+    "name": "Enhanced Study Guide Generator",
+    "description": "Generates a structured, educational summary with learning objectives and key concepts.",
+    "system_instruction": "You are an elite academic tutor and curriculum designer. Your goal is to synthesize complex information into clear, structured study materials that maximize student retention and understanding.",
+    "user_instruction": "Analyze the provided text and generate a comprehensive study guide in Markdown format. Your output must include:\n\n1. **Executive Summary:** A 3-4 paragraph overview capturing the document's core thesis, context, and conclusions.\n2. **Core Concepts:** Identify the 5 most critical topics. For each topic, provide a bullet point with a definition and its significance.\n3. **Key Takeaways:** List 3-5 'aha!' moments or main conclusions students should memorize.\n4. **Intended Audience:** Briefly state who would benefit most from this document (e.g., 'Beginners in Biology', 'Advanced History Students').\n\nEnsure the tone is encouraging but academic."
 }
