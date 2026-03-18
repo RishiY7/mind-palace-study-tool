@@ -35,9 +35,13 @@ MONGODB_URI=mongodb://127.0.0.1:27017/mind_palace
 Run:
 ```powershell
 streamlit run app.py
-# or use start.ps1 to verify Mongo/.env first
 ```
 Open `http://localhost:8501`.
+
+Download the ONNX embedding model (one-time setup):
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\download_nomic_model.ps1 -InstallDeps
+```
 
 ## 📁 Project Structure
 ```
@@ -59,9 +63,11 @@ STEP BY STEP DEC 7/
 │   ├── onnx_embedder.py        # Nomic embed ONNX wrapper
 │   └── sidebar_utils.py        # Shared sidebar renderer
 ├── prompts/                    # JSON prompt configs (summary, topics, flashcards, scheduler, quiz, mnemonics)
+├── scripts/
+│   └── download_nomic_model.ps1 # One-command Nomic ONNX model downloader
 ├── onnx/model_int8.onnx        # Local embedding model (int8)
 ├── requirements.txt
-└── start.ps1                   # Optional quick-start check + run
+└── .env                         # Runtime config (Groq + MongoDB)
 ```
 
 ## 🎯 Usage Workflow

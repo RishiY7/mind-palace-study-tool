@@ -2,7 +2,12 @@
 
 ## 🚀 Launch
 ```powershell
-streamlit run app.py   # or run start.ps1 for quick checks
+streamlit run app.py
+```
+
+## ⬇️ Download ONNX Model (One-time)
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\download_nomic_model.ps1 -InstallDeps
 ```
 
 ## 📋 Project Overview
