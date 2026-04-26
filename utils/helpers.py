@@ -20,7 +20,8 @@ gemini_client = genai.Client(api_key=os.getenv('GEMINI_API_KEY'))
 def load_prompt(prompt_file):
     """Load a prompt configuration from JSON file."""
     prompt_path = os.path.join('prompts', prompt_file)
-    with open(prompt_path, 'r') as f:
+    # Explicitly set encoding to 'utf-8' to handle emojis and special characters on Windows
+    with open(prompt_path, 'r', encoding='utf-8') as f:
         return json.load(f)
 
 def extract_text_from_pdf(pdf_file):
@@ -85,7 +86,7 @@ def call_gemini(prompt_config, context_text="", target_text="", **kwargs):
     if estimated_tokens > 7500:
         # Use Gemini API for large content
         response = gemini_client.models.generate_content(
-            model=os.getenv('GEMINI_MODEL', 'gemini-2.0-flash-exp'),
+            model=os.getenv('GEMINI_MODEL', 'gemini-flash-latest'),
             contents=full_prompt
         )
         return response.text
