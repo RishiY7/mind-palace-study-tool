@@ -20,7 +20,6 @@ An interactive Streamlit app that turns PDFs into full learning notebooks with A
 
 ### Installation & Run
 ```powershell
-cd "c:\Users\vishn\PROJECT\STEP BY STEP DEC 7"
 pip install -r requirements.txt
 ```
 
